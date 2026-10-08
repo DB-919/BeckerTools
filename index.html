@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101724">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Becker Tools">
+  <meta name="description" content="Offlinefähige iPhone-App für LPBF, Wärmebehandlung, Wärmezeit und Timer.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <title>Becker Tools · LPBF, WB-Auswertung, Wärmezeit &amp; Timer</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1019; --panel:#151e2d; --panel2:#1a2638; --line:#2a394e; --text:#f2f6fb; --muted:#aab9cd; --accent:#54bfff; --accent2:#43e0bd; --warn:#ffc774; --bad:#ff858f; --radius:20px; }
+    * { box-sizing:border-box; }
+    html { -webkit-text-size-adjust:100%; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; font-size:16px; line-height:1.45; }
+    button,input,select { font:inherit; }
+    button { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    button:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid var(--accent);outline-offset:3px; }
+    .app { width:min(100%,920px); padding: max(20px,env(safe-area-inset-top)) 16px max(32px,env(safe-area-inset-bottom)); margin:auto; }
+    .brand { display:flex;align-items:center;justify-content:space-between;gap:12px; margin:2px 0 22px; }
+    .brand-mark { width:43px;height:43px;border-radius:12px;background:linear-gradient(145deg,#2779bf,#48c6d9);display:grid;place-items:center;box-shadow:0 6px 24px #1e92e133;font-weight:800;font-size:21px;letter-spacing:-2px;color:#fff; }
+    .brand-text { display:flex;align-items:center;gap:11px;min-width:0; }
+    h1 { font-size:21px;line-height:1.13;margin:0;letter-spacing:-.5px; }
+    .sub { color:var(--muted);font-size:12px;display:block;margin-top:4px; }
+    .badge { color:#99eadb;border:1px solid #346e6b;background:#183a3e;border-radius:40px;padding:6px 10px;white-space:nowrap;font-size:11px;font-weight:700; }
+    .hero { background:linear-gradient(135deg,#182940 0%,#152031 78%); border:1px solid #2e4862;padding:22px 20px;border-radius:24px; margin-bottom:16px;overflow:hidden;position:relative; }
+    .hero:after {content:"";position:absolute; width:140px;height:140px;border-radius:50%;right:-60px;top:-70px;background:#347ec037;pointer-events:none;}
+    .eyebrow { color:#71d3ff;text-transform:uppercase;letter-spacing:2px;font-size:11px;font-weight:750; }
+    .hero h2 { margin:7px 0 6px;line-height:1.17;font-size:clamp(24px,5.3vw,33px);letter-spacing:-.6px; }
+    .hero p {color:#becfe1;font-size:14px;margin:0;max-width:620px;}
+    .nav {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0 20px;}
+    .nav button {min-height:65px;border:1px solid var(--line);background:#141d2b;color:#afc1d5;border-radius:15px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;padding:8px 4px;font-size:12px;font-weight:700;}
+    .nav button .icon {font-size:21px;font-weight:700;}
+    .nav button[aria-selected="true"]{background:#203952;border-color:#5fb9f0;color:#fff;box-shadow:inset 0 0 0 1px #5fb9f036;}
+    .panel {display:none;}
+    .panel.active {display:block;}
+    .section-head {display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:13px;}
+    .section-head h2 {font-size:20px;margin:0;letter-spacing:-.3px;}
+    .section-head p {margin:3px 0 0;color:var(--muted);font-size:13px;}
+    .card {background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:14px;}
+    .card h3{font-size:16px;margin:0 0 14px;letter-spacing:-.1px;}
+    .grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;}
+    .grid3 {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;}
+    label {display:block;color:#c6d4e3;font-size:13px;font-weight:650;min-width:0;}
+    label .hint {display:block;color:#849ab2;font-size:11px;margin-top:3px;font-weight:400;}
+    input,select {margin-top:6px;width:100%;min-width:0;border:1px solid #3a4c63;background:#0c1522;border-radius:12px;min-height:47px;color:#fff;padding:10px 11px;font-size:16px;line-height:1.3;}
+    input::placeholder {color:#8093a9;}
+    select {padding-right:28px;}
+    .results {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;}
+    .stat{background:var(--panel2);border:1px solid #30425b;border-radius:15px;padding:13px 12px;min-width:0;}
+    .stat .name{font-size:12px;color:#b1c3d6;margin-bottom:6px;}
+    .stat .number{font-size:clamp(21px,4.8vw,30px);letter-spacing:-.8px;font-weight:800;line-height:1.1;overflow-wrap:anywhere;}
+    .stat .unit {display:block;color:#8db0c6;font-size:11px;margin-top:6px;}
+    .stat.accent {border-color:#477ca0;background:#183148;}
+    .stat.accent .number{color:#8bd6ff;}
+    .full {grid-column:1/-1;}
+    .message {border-radius:12px;padding:11px 13px;background:#213347;color:#c0e2ff;border:1px solid #345471;font-size:13px;margin-top:13px;}
+    .message.warn{background:#3a2d21;border-color:#705035;color:#ffdb9f;}
+    .message.error{background:#39242f;border-color:#764454;color:#ffc5ca;}
+    .message:empty {display:none;}
+    .divider {height:1px;background:var(--line);margin:17px 0;}
+    .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px;}
+    .btn {border-radius:12px;min-height:45px;padding:10px 14px;border:1px solid #3d607a;background:#1f344a;color:#f1f7ff;font-size:13px;font-weight:700;}
+    .btn.primary{background:#60c5ff;border-color:#60c5ff;color:#081827;}
+    .btn.secondary{background:#152335;}
+    .btn.danger{background:#392733;border-color:#77414d;color:#ffb5c0;}
+    .helper {font-size:12px;color:var(--muted);margin:10px 0 0;}
+    .formula {border-left:3px solid #6099c2;background:#101a28;border-radius:4px 10px 10px 4px;padding:11px 13px;font-size:13px;color:#c9d6e5;margin-top:13px;overflow-wrap:anywhere;}
+    code {font-size:13px;color:#b1e2fa;}
+    .horizontal-line {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:9px 0;font-size:13px;color:#c7d8e8;}
+    .horizontal-line strong{color:#fff;white-space:nowrap;}
+    .costbar {display:flex; height:15px;border-radius:7px;overflow:hidden;margin:12px 0 16px;background:#243147;}
+    .costbar span:nth-child(1){background:#66bcff;}
+    .costbar span:nth-child(2){background:#42d3b3;}
+    .costbar span:nth-child(3){background:#ffc374;}
+    .costbar span:nth-child(4){background:#b6a6ff;}
+    .costlegend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;font-size:12px;color:#c5d1df;}
+    .dot {width:9px;height:9px;display:inline-block;border-radius:50%;margin-right:5px;}
+    .costlegend div {min-width:0;}
+    .storage-note {font-size:13px;color:#b1c4d7;}
+    .saved-list{display:grid;gap:8px;margin-top:12px;}
+    .saved-item {display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 11px;border-radius:12px;border:1px solid var(--line);background:#101a28;}
+    .saved-item .name {font-size:14px;font-weight:700;overflow-wrap:anywhere;min-width:0;flex:1;}
+    .saved-item .mini {font-size:11px;color:var(--muted);}
+    .saved-item button {padding:8px 11px;border-radius:9px;border:1px solid #3b5975;background:#22384e;color:#fff;font-size:12px;min-height:38px;}
+    .saved-item button.delete {background:#392733;border-color:#824653;color:#fbbbc0;}
+    .statusline {color:#b2d3c8;font-size:12px;min-height:18px;margin-top:9px;}
+    footer {padding:16px 4px 8px;font-size:12px;color:#8d9fb2;text-align:center;}
+    [hidden]{display:none!important;}
+    @media (max-width:390px){.grid3 {grid-template-columns:repeat(2,minmax(0,1fr));}.card{padding:15px;}.nav button{font-size:11px}.app{padding-left:12px;padding-right:12px}}
+    @media (min-width:680px){.app{padding-left:28px;padding-right:28px;}.hero{padding:28px}.card{padding:23px}.results{grid-template-columns:repeat(4,minmax(0,1fr));}.twocol {display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.twocol>.card {margin-bottom:0;}}
+    @media print {body{background:white;color:black}.app{width:100%;padding:0}.brand,.nav,.hero,.actions,.btn,.profile-only,footer,.saved-list,.statusline{display:none!important}.panel{display:block!important;break-before:page}.panel:first-of-type{break-before:auto}.card{background:white;color:black;border:1px solid #ccc;break-inside:avoid}.card h3,.stat .number,.horizontal-line strong,label{color:black}.stat{background:#f3f3f3;border:1px solid #ccc}.stat .name,.stat .unit,.section-head p,.helper,.horizontal-line{color:#333}.message{color:black;background:#eee}.section-head{margin-top:18px}input,select{color:black;background:#fff;border:1px solid #aaa}.costbar{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+
+    .nav{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .nav button{min-width:0;min-height:60px;}
+    .subcard{border:1px solid #344961;background:#111b2b;border-radius:13px;padding:13px;margin:11px 0;}
+    .record-grid{display:grid;gap:10px;}
+    .record{border:1px solid #34506b;background:#101b2b;border-radius:14px;padding:12px;min-width:0;}
+    .record-header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px;font-size:14px;font-weight:750;}
+    .record .grid{gap:8px;}
+    .record label{font-size:12px;}
+    .small{font-size:12px;color:var(--muted)}
+    .big-number{font-size:clamp(38px,9vw,62px);letter-spacing:-2px;line-height:1.1;font-weight:850;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+    .timer-display{text-align:center;background:#101b2b;border:1px solid #344a62;padding:22px 12px;border-radius:17px;margin:15px 0;}
+    .timer-pills{display:flex;gap:8px;overflow-x:auto;padding-bottom:3px;}
+    .timer-pills button{flex:none;white-space:nowrap;}
+    .table-scroller{overflow:auto;max-width:100%;}
+    .gridtable{width:100%;border-collapse:collapse;font-size:12px;min-width:480px;}
+    .gridtable th,.gridtable td{padding:9px 8px;border-bottom:1px solid #304055;text-align:left;white-space:nowrap;}
+    .gridtable th{color:#b9cadc;font-size:11px;}
+    .gridtable td{color:#eef5ff;}
+    .gridtable .green{color:#79e0c4}.gridtable .red{color:#ffa2ab}
+    .chart-frame{border-radius:14px;background:#0e1926;border:1px solid #32445c;padding:10px;overflow:hidden;}
+    .chart-frame svg{display:block;width:100%;height:auto;touch-action:manipulation;}
+    .legend-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12px;color:#c9d7e7;margin-top:9px;}
+    .legend-line>span{display:inline-flex;align-items:center;gap:4px;}
+    .swatch{width:16px;height:3px;border-radius:2px;display:inline-block;}
+    .inline-check{display:flex;gap:8px;align-items:center;font-size:13px;padding:5px 0;}
+    .inline-check input{min-height:20px;width:20px;margin:0;accent-color:#65c4fb;}
+    .wide-control{grid-column:1/-1;}
+    .wb-steps{display:grid;gap:9px;}
+    .wb-program{border:1px solid #364961;border-radius:13px;padding:12px;background:#111c2b;}
+    .wb-program>.record-header{margin-bottom:7px;}
+    .wb-summary{display:grid;gap:8px;}
+    .wb-status{padding:12px;border:1px solid #3b5169;background:#162639;border-radius:11px;font-size:13px;}
+    .wb-status.ok{border-color:#337863;background:#17372f;}
+    .wb-status.fail{border-color:#875464;background:#3b2530;}
+    .wb-status.off{opacity:.7;}
+    .wb-status strong{display:block;font-size:14px;margin-bottom:4px;}
+    .timer-laps{margin:12px 0 0;padding-left:20px;color:#c6d5e3;font-size:13px;}
+    .tag{background:#233a51;color:#b8d9fa;padding:3px 7px;border-radius:7px;font-size:11px;}
+    .plate-svg rect.item{fill:#56abcf;stroke:#b4e7ff;stroke-width:.6}
+    .plate-svg .bed{fill:#172b3c;stroke:#79b4d0;stroke-width:2}
+    .plate-svg text{font-size:12px;fill:#eaf1fc}
+    .message.info{background:#203448;border-color:#396281;color:#dbf0ff}
+    #wb-print-report{display:none}
+    @media (max-width:390px){.nav button{min-height:55px;font-size:10px}.nav button .icon{font-size:19px}}
+    @media (min-width:750px){.nav{grid-template-columns:repeat(5,minmax(0,1fr));}.record-grid{grid-template-columns:1fr 1fr}.wb-summary{grid-template-columns:1fr 1fr}}
+    @media (min-width:950px){.nav{grid-template-columns:repeat(10,minmax(0,1fr));}}
+    @media print{
+      body.wb-report .app{display:none!important}
+      body.wb-report #wb-print-report{display:block!important;color:#111;font-family:Arial,sans-serif;margin:10mm;font-size:11pt}
+      body.wb-report .print-section{break-before:page;page-break-before:always}
+      body.wb-report .print-section:first-child{break-before:auto;page-break-before:auto}
+      body.wb-report .print-row{margin:8px 0;padding:7px;border:1px solid #aaa;break-inside:avoid}
+      body.wb-report svg{max-width:100%;height:auto}
+      body:not(.wb-report) .panel{display:none!important}
+      body:not(.wb-report) .panel.active{display:block!important}
+    }
+
+    /* Wärmezeit – Prozessplaner (aus der bisherigen eigenständigen PWA integriert) */
+    .wz-mode{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .wz-mode .btn[aria-pressed="true"]{background:#205078;border-color:#6dc9ff;color:#fff}
+    .wz-step{background:#101b2b;border:1px solid #3b536e;border-radius:15px;padding:13px;margin-top:12px}
+    .wz-step-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-size:15px;font-weight:750}
+    .wz-small-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .wz-small-actions button{min-width:38px;min-height:40px;padding:6px 10px}
+    .wz-small-actions button:disabled{opacity:.35}
+    .wz-step-fields{display:grid;grid-template-columns:1.15fr .85fr;gap:10px}
+    .wz-step-hours{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    .wz-step label{font-size:12px}
+    .wz-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    .wz-kpi{padding:13px;border-radius:15px;background:#192b41;border:1px solid #345471;min-width:0}
+    .wz-kpi-label{font-size:12px;color:#bed0e0;margin-bottom:5px}
+    .wz-kpi-val{font-size:clamp(18px,4.5vw,25px);font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+    .wz-kpi-wide{grid-column:1/-1;text-align:center;background:#123149;border-color:#3c7ea0}
+    .wz-kpi-wide .wz-kpi-val{font-size:clamp(26px,7vw,37px);color:#85d6ff}
+    .wz-line{display:grid;grid-template-columns:minmax(105px,auto) minmax(0,1fr) auto;align-items:start;gap:10px;padding:11px 0;border-bottom:1px solid #33455b;font-size:13px}
+    .wz-line:last-child{border-bottom:0}
+    .wz-clock{font-variant-numeric:tabular-nums;font-weight:750;color:#9edaff}
+    .wz-line-time{white-space:nowrap;color:#bed0e0;font-variant-numeric:tabular-nums}
+    #wz-status{min-height:18px}
+    @media (max-width:410px){.wz-step-fields{grid-template-columns:1fr 1fr}.wz-line{grid-template-columns:1fr auto}.wz-clock{grid-column:1/-1}.wz-step-hours{gap:8px}}
+    @media print{#panel-waermezeit .wz-step .wz-small-actions,#panel-waermezeit .wz-hide-print{display:none!important}}
+  </style>
+</head>
+<body>
+<main class="app">
+  <header class="brand">
+    <div class="brand-text"><div class="brand-mark" aria-hidden="true">B<span style="color:#baf4ff">T</span></div><div><h1>Becker Tools</h1><span class="sub">Additive Fertigung · Wärmebehandlung · V2.1</span></div></div>
+    <div class="badge" id="storage-badge">● Lokal</div>
+  </header>
+  <section class="hero" aria-label="Einführung"><div class="eyebrow">BECKER TOOLS · V2.1</div><h2>Rechnen. Analysieren. Messen.</h2><p>LPBF-Parameter, Bauplatten, Materialien, WB-Auswertung, Wärmezeit-Prozessplanung und Timer – offlinefähig auf deinem iPhone.</p></section>
+  <nav class="nav" role="tablist" aria-label="Rechenmodule">
+    <button id="tab-laser" type="button" role="tab" aria-controls="panel-laser" aria-selected="true" data-tab="laser"><span class="icon" aria-hidden="true">⚡</span>Laser</button>
+    <button id="tab-time" type="button" role="tab" aria-controls="panel-time" aria-selected="false" data-tab="time"><span class="icon" aria-hidden="true">⏱</span>Bauzeit</button>
+    <button id="tab-cost" type="button" role="tab" aria-controls="panel-cost" aria-selected="false" data-tab="cost"><span class="icon" aria-hidden="true">€</span>Kosten</button>
+    <button id="tab-compare" type="button" role="tab" aria-controls="panel-compare" aria-selected="false" data-tab="compare"><span class="icon" aria-hidden="true">📊</span>Vergleich</button>
+    <button id="tab-plate" type="button" role="tab" aria-controls="panel-plate" aria-selected="false" data-tab="plate"><span class="icon" aria-hidden="true">▦</span>Bauplatte</button>
+    <button id="tab-material" type="button" role="tab" aria-controls="panel-material" aria-selected="false" data-tab="material"><span class="icon" aria-hidden="true">⚖</span>Material</button>
+    <button id="tab-wb" type="button" role="tab" aria-controls="panel-wb" aria-selected="false" data-tab="wb"><span class="icon" aria-hidden="true">🌡</span>WB</button>
+    <button id="tab-waermezeit" type="button" role="tab" aria-controls="panel-waermezeit" aria-selected="false" data-tab="waermezeit"><span class="icon" aria-hidden="true">🗓️</span>Wärmezeit</button>
+    <button id="tab-timer" type="button" role="tab" aria-controls="panel-timer" aria-selected="false" data-tab="timer"><span class="icon" aria-hidden="true">⏲</span>Timer</button>
+    <button id="tab-data" type="button" role="tab" aria-controls="panel-data" aria-selected="false" data-tab="data"><span class="icon" aria-hidden="true">▣</span>Profile</button>
+  </nav>
+
+  <section class="panel active" id="panel-laser" role="tabpanel" aria-labelledby="tab-laser">
+    <div class="section-head"><div><h2>Laserparameter</h2><p>Volumetrische Energiedichte und Schmelzrate</p></div></div>
+    <div class="card"><h3>Belichtungsparameter</h3><div class="grid">
+      <label>Laserleistung P <span class="hint">Watt (W)</span><input data-field="power" type="number" inputmode="decimal" min="0.01" step="any" value="350"></label>
+      <label>Scangeschwindigkeit v <span class="hint">mm/s</span><input data-field="speed" type="number" inputmode="decimal" min="0.01" step="any" value="1400"></label>
+      <label>Hatchabstand h <span class="hint">mm</span><input data-field="hatch" type="number" inputmode="decimal" min="0.001" step="any" value="0.15"></label>
+      <label>Schichtdicke t <span class="hint">µm · auch für Bauzeit</span><input data-field="layer" type="number" inputmode="decimal" min="0.1" step="any" value="30"></label>
+    </div><div class="message warn">Die vorbelegten Werte sind reine Rechenbeispiele und <strong>keine freigegebenen Prozessparameter</strong>.</div></div>
+    <div class="card"><h3>Berechnete Kennwerte</h3><div class="results" aria-live="polite">
+      <div class="stat accent"><div class="name">Energiedichte Eᵥ</div><div class="number" id="res-ved">—</div><span class="unit">J/mm³</span></div>
+      <div class="stat"><div class="name">Linienenergie Eₗ</div><div class="number" id="res-line">—</div><span class="unit">J/mm</span></div>
+      <div class="stat"><div class="name">Flächenenergie Eₐ</div><div class="number" id="res-area">—</div><span class="unit">J/mm²</span></div>
+      <div class="stat"><div class="name">Theoretischer Volumenstrom</div><div class="number" id="res-rate">—</div><span class="unit">cm³/h · ohne Nebenzeiten</span></div>
+    </div><div id="laser-error" class="message error" role="status"></div><div class="formula">Eᵥ = P / (v × h × t) · t in mm<br>Eₗ = P / v · Eₐ = P / (v × h)<br>Q = v × h × t × 3,6 (cm³/h)</div></div>
+    <div class="card"><h3>Ziel-Energiedichte</h3><label>Zielwert Eᵥ <span class="hint">J/mm³</span><input data-field="target" type="number" min="0.01" step="any" inputmode="decimal" value="55"></label><div class="results" style="margin-top:13px" aria-live="polite">
+      <div class="stat"><div class="name">Benötigte Scangeschwindigkeit</div><div class="number" id="res-speed-target">—</div><span class="unit">mm/s · bei aktueller Leistung</span></div>
+      <div class="stat"><div class="name">Benötigte Laserleistung</div><div class="number" id="res-power-target">—</div><span class="unit">W · bei aktueller Geschwindigkeit</span></div>
+    </div><div class="actions"><button class="btn secondary" type="button" id="use-speed">Geschwindigkeit übernehmen</button><button class="btn secondary" type="button" id="use-power">Leistung übernehmen</button></div><div class="message error" id="target-error" role="status"></div><p class="helper">Der Zielwert ist nur eine rechnerische Umstellung der Formel, keine Aussage zur Prozessstabilität.</p></div>
+  </section>
+
+  <section class="panel" id="panel-time" role="tabpanel" aria-labelledby="tab-time">
+    <div class="section-head"><div><h2>Bauzeitrechner</h2><p>Grobe LPBF-Baujobkalkulation aus Volumen und Schichten</p></div></div>
+    <div class="card"><h3>Baujob</h3><div class="grid">
+      <label>Anlage<span class="hint">Informativ</span><select data-field="machine"><option value="SLM500">SLM 500</option><option value="SLM280">SLM 280</option><option value="Andere">Andere Anlage</option></select></label>
+      <label>Bauhöhe<span class="hint">mm</span><input data-field="height" type="number" min="0.01" step="any" inputmode="decimal" value="80"></label>
+      <label>Bauteile pro Baujob<span class="hint">Stück</span><input data-field="pieces" type="number" min="1" step="1" inputmode="numeric" value="12"></label>
+      <label>CAD-Volumen je Bauteil<span class="hint">cm³ · ohne Supports</span><input data-field="volume" type="number" min="0.01" step="any" inputmode="decimal" value="18"></label>
+      <label>Supportanteil<span class="hint">% vom Bauteilvolumen</span><input data-field="support" type="number" min="0" max="500" step="any" inputmode="decimal" value="15"></label>
+      <label>Effektiver Scananteil<span class="hint">% vom theoretischen Volumenstrom</span><input data-field="efficiency" type="number" min="1" max="100" step="any" inputmode="decimal" value="65"></label>
+      <label>Beschichtung je Schicht<span class="hint">Sekunden je Schicht</span><input data-field="recoat" type="number" min="0" step="any" inputmode="decimal" value="12"></label>
+      <label>Zusätzliche Zeit pro Job<span class="hint">Minuten · Rüsten/Wartezeiten</span><input data-field="fixed" type="number" min="0" step="any" inputmode="decimal" value="60"></label>
+      <label>Maximale geplante Bauzeit<span class="hint">Stunden · Warnschwelle</span><input data-field="limit" type="number" min="0.1" step="any" inputmode="decimal" value="168"></label>
+    </div><p class="helper">Der effektive Scananteil berücksichtigt pauschal Umkehrfahrten, Konturen und weitere Belichtungs-Nebenzeiten. Die reale Schichtdauer kann hiervon stark abweichen.</p></div>
+    <div class="card"><h3>Ergebnis Baujob</h3><div class="results" aria-live="polite">
+      <div class="stat accent"><div class="name">Geschätzte Bauzeit</div><div class="number" id="res-total-time">—</div><span class="unit">Stunden</span></div>
+      <div class="stat"><div class="name">Schichten</div><div class="number" id="res-layers">—</div><span class="unit">aufgerundet</span></div>
+      <div class="stat"><div class="name">Aufgeschmolzenes Volumen</div><div class="number" id="res-total-volume">—</div><span class="unit">cm³ inkl. Supports</span></div>
+      <div class="stat"><div class="name">Effektiver Volumenstrom</div><div class="number" id="res-effective-rate">—</div><span class="unit">cm³/h</span></div>
+    </div><div class="divider"></div>
+    <div class="horizontal-line"><span>Geschätzte Scanzeit</span><strong id="res-scan-time">—</strong></div>
+    <div class="horizontal-line"><span>Beschichtungszeit</span><strong id="res-recoat-time">—</strong></div>
+    <div class="horizontal-line"><span>Zusätzliche Zeit</span><strong id="res-fixed-time">—</strong></div>
+    <div id="time-error" class="message error" role="status"></div><div id="time-warning" class="message" role="status"></div></div>
+  </section>
+
+  <section class="panel" id="panel-cost" role="tabpanel" aria-labelledby="tab-cost">
+    <div class="section-head"><div><h2>Kostenkalkulation</h2><p>Maschinen-, Pulver- und Nachbearbeitungskosten</p></div></div>
+    <div class="card"><h3>Material und Kostensätze</h3><div class="grid">
+      <label>Material<span class="hint">Dichten sind Näherungswerte</span><select data-field="material"><option value="AlSi10Mg">AlSi10Mg</option><option value="A20X">A20X</option><option value="Ti64">Ti-6Al-4V</option><option value="316L">1.4404 / 316L</option><option value="custom">Benutzerdefiniert</option></select></label>
+      <label>Materialdichte<span class="hint">g/cm³</span><input data-field="density" type="number" min="0.01" step="any" inputmode="decimal" value="2.67"></label>
+      <label>Pulverpreis<span class="hint">€/kg</span><input data-field="powderPrice" type="number" min="0" step="any" inputmode="decimal" value="90"></label>
+      <label>Pulververlust<span class="hint">% zusätzlich zur Schmelzmasse</span><input data-field="powderLoss" type="number" min="0" max="500" step="any" inputmode="decimal" value="5"></label>
+      <label>Maschinenstundensatz<span class="hint">€/h</span><input data-field="machineRate" type="number" min="0" step="any" inputmode="decimal" value="85"></label>
+      <label>Einmalige Rüstkosten<span class="hint">€ je Job</span><input data-field="setupCost" type="number" min="0" step="any" inputmode="decimal" value="70"></label>
+      <label>Nachbearbeitung<span class="hint">€ je Bauteil</span><input data-field="postCost" type="number" min="0" step="any" inputmode="decimal" value="12"></label>
+      <label>Kalkulationszuschlag<span class="hint">% auf direkte Kosten · kein MwSt.</span><input data-field="markup" type="number" min="0" max="1000" step="any" inputmode="decimal" value="20"></label>
+    </div></div>
+    <div class="card"><h3>Kalkulation pro Baujob</h3><div class="results" aria-live="polite">
+      <div class="stat accent"><div class="name">Direkte Jobkosten</div><div class="number" id="res-direct">—</div><span class="unit">€</span></div>
+      <div class="stat"><div class="name">Kosten / Bauteil</div><div class="number" id="res-unit-cost">—</div><span class="unit">€ ohne Zuschlag</span></div>
+      <div class="stat"><div class="name">Kalkulierter Preis / Stk.</div><div class="number" id="res-unit-price">—</div><span class="unit">€ mit Zuschlag · netto</span></div>
+      <div class="stat"><div class="name">Pulverbedarf rechnerisch</div><div class="number" id="res-mass">—</div><span class="unit">kg inkl. Verlust</span></div>
+    </div><div class="costbar" aria-label="Kostenaufteilung"><span id="bar-machine"></span><span id="bar-powder"></span><span id="bar-post"></span><span id="bar-setup"></span></div><div class="costlegend"><div><i class="dot" style="background:#66bcff"></i>Maschine: <strong id="res-machine-eur">—</strong></div><div><i class="dot" style="background:#42d3b3"></i>Pulver: <strong id="res-powder-eur">—</strong></div><div><i class="dot" style="background:#ffc374"></i>Nacharbeit: <strong id="res-post-eur">—</strong></div><div><i class="dot" style="background:#b6a6ff"></i>Rüsten: <strong id="res-setup-eur">—</strong></div></div><div class="divider"></div><div class="horizontal-line"><span>Gesamtpreis mit Zuschlag</span><strong id="res-total-price">—</strong></div><div id="cost-error" class="message error" role="status"></div><p class="helper">Nur Näherungsrechnung: Schutzgas, Qualitätssicherung, Wärmebehandlung, Ausschuss, Abschreibung, Gemeinkosten und Versand nur enthalten, wenn in Kostensätzen/Zuschlägen eingerechnet. Kein Angebotspreis ohne Plausibilitätsprüfung.</p></div>
+  </section>
+
+
+  <section class="panel" id="panel-compare" role="tabpanel" aria-labelledby="tab-compare">
+    <div class="section-head"><div><h2>Parametervergleich</h2><p>Bis zu vier Parametersätze vergleichen und grafisch auswerten</p></div></div>
+    <div class="card"><h3>Belichtungsparameter</h3><div class="actions"><button class="btn primary" id="cmp-from-main" type="button">Aktuelle Laserwerte übernehmen</button><button class="btn secondary" id="cmp-add" type="button">Parametersatz hinzufügen</button></div><div id="compare-rows" class="record-grid" style="margin-top:12px"></div><div id="compare-message" class="message" role="status"></div></div>
+    <div class="card"><h3>Gegenüberstellung</h3><div class="table-scroller"><table class="gridtable" id="compare-table"><thead><tr><th>Profil</th><th>Eᵥ · J/mm³</th><th>Q · cm³/h</th><th>Eₗ · J/mm</th></tr></thead><tbody></tbody></table></div><div class="divider"></div><div class="chart-frame"><div class="small" style="margin-bottom:8px">Energiedichte und theoretischer Volumenstrom · getrennte Skalen</div><svg id="compare-chart" role="img" aria-label="Balkendiagramm der Parametersätze" viewBox="0 0 660 250"></svg></div><div class="legend-line"><span><i class="swatch" style="background:#62bbf8"></i>Energiedichte</span><span><i class="swatch" style="background:#4bd4ad"></i>Volumenstrom</span></div></div>
+    <div class="card"><h3>Rechnerische Parameteroptimierung</h3><div class="grid"><label>Ziel-Energiedichte <span class="hint">J/mm³</span><input id="opt-ved" type="number" step="any" min="0.01" value="55"></label><label>Laserleistung <span class="hint">W</span><input id="opt-power" type="number" step="any" min="0.01" value="350"></label><label>Hatchabstand <span class="hint">mm</span><input id="opt-hatch" type="number" step="any" min="0.001" value="0.15"></label><label>Schichtdicke <span class="hint">µm</span><input id="opt-layer" type="number" step="any" min="0.1" value="30"></label></div><div class="results" style="margin-top:13px"><div class="stat accent"><div class="name">Rechnerische Geschwindigkeit</div><div class="number" id="opt-speed">—</div><span class="unit">mm/s</span></div><div class="stat"><div class="name">Theoretischer Volumenstrom</div><div class="number" id="opt-rate">—</div><span class="unit">cm³/h</span></div></div><div class="actions"><button class="btn primary" id="opt-transfer" type="button">In Laserrechner übernehmen</button></div><div id="opt-error" class="message error" role="status"></div><p class="helper">Diese mathematische Umstellung prüft keine Schmelzbadstabilität, Porosität, Risse oder Anlagenlimits. Nur innerhalb freigegebener Parameterfenster verwenden.</p></div>
+  </section>
+  <section class="panel" id="panel-plate" role="tabpanel" aria-labelledby="tab-plate">
+    <div class="section-head"><div><h2>Bauplattenbelegung</h2><p>Rechteckige Bauteile mit frei wählbarem Abstand anordnen</p></div></div>
+    <div class="card"><h3>Abmessungen</h3><div class="grid"><label>Maschine <select id="plate-machine"><option value="SLM500">SLM 500 · 500 × 280</option><option value="SLM280">SLM 280 · 280 × 280</option><option value="custom">Eigene Größe</option></select></label><label>Ausrichtung <select id="plate-rotate"><option value="auto">Beste 0° / 90°</option><option value="0">0°</option><option value="90">90°</option></select></label><label>Bauplatte X <span class="hint">mm</span><input id="plate-x" type="number" min="1" step="any" value="500"></label><label>Bauplatte Y <span class="hint">mm</span><input id="plate-y" type="number" min="1" step="any" value="280"></label><label>Bauteil X <span class="hint">mm inkl. Bounding Box</span><input id="plate-part-x" type="number" min="0.1" step="any" value="45"></label><label>Bauteil Y <span class="hint">mm inkl. Bounding Box</span><input id="plate-part-y" type="number" min="0.1" step="any" value="35"></label><label>Zwischenabstand <span class="hint">mm</span><input id="plate-gap" type="number" min="0" step="any" value="8"></label><label>Randabstand <span class="hint">mm</span><input id="plate-margin" type="number" min="0" step="any" value="10"></label><label>Bauteilhöhe <span class="hint">mm</span><input id="plate-z" type="number" min="0.1" step="any" value="75"></label></div><div id="plate-error" class="message error" role="status"></div></div>
+    <div class="card"><h3>Ergebnis</h3><div class="results"><div class="stat accent"><div class="name">Max. Bauteilanzahl</div><div class="number" id="plate-count">—</div><span class="unit">Stück · vereinfachte Rasterbelegung</span></div><div class="stat"><div class="name">Spalten × Reihen</div><div class="number" id="plate-layout">—</div></div><div class="stat"><div class="name">Flächennutzung</div><div class="number" id="plate-fill">—</div><span class="unit">% der Brutto-Baufläche</span></div><div class="stat"><div class="name">Freie Fläche</div><div class="number" id="plate-free">—</div><span class="unit">mm²</span></div></div><div class="chart-frame" style="margin-top:13px"><svg id="plate-chart" class="plate-svg" viewBox="0 0 660 390" aria-label="Schematische Bauplattenbelegung" role="img"></svg></div><div class="actions"><button class="btn primary" id="plate-apply" type="button">Stückzahl und Höhe in Bauzeit übernehmen</button></div><p class="helper">Ein einfaches orthogonales Raster: keine Konturprüfung, Stützen, Mischplatten, Sperrzonen, thermische Abstände oder automatische Nesting-Optimierung. X/Y bei SLM 500 als 500 × 280 mm angenommen; tatsächliche nutzbare Fläche prüfen.</p></div>
+  </section>
+  <section class="panel" id="panel-material" role="tabpanel" aria-labelledby="tab-material">
+    <div class="section-head"><div><h2>Materialrechner</h2><p>Gewicht, Volumen und eigene Werkstoffdatenbank</p></div></div>
+    <div class="card"><h3>Gewicht und Volumen</h3><div class="grid"><label>Material <select id="mat-select"></select></label><label>Volumen <span class="hint">cm³</span><input id="mat-volume" type="number" min="0" step="any" value="100"></label><label>Dichte <span class="hint">g/cm³</span><input id="mat-density" type="number" min="0.01" step="any" value="2.67"></label><label>Pulveraufschlag <span class="hint">%</span><input id="mat-loss" type="number" min="0" max="500" step="any" value="5"></label></div><div class="results" style="margin-top:13px"><div class="stat accent"><div class="name">Bauteilmasse</div><div id="mat-grams" class="number">—</div><span class="unit">g ohne Pulveraufschlag</span></div><div class="stat"><div class="name">Pulverbedarf rechnerisch</div><div id="mat-kg" class="number">—</div><span class="unit">kg inkl. Aufschlag</span></div></div><div class="actions"><button class="btn secondary" type="button" id="mat-apply">Materialdaten in Kostenrechner übernehmen</button></div><div id="mat-error" class="message error" role="status"></div></div>
+    <div class="card"><h3>Eigene Materialien</h3><div class="grid"><label>Materialname<input id="mat-new-name" type="text" maxlength="45" placeholder="z. B. AlSi7Mg"></label><label>Dichte <span class="hint">g/cm³</span><input id="mat-new-density" type="number" min="0.01" step="any" placeholder="2,68"></label><label>Pulverpreis <span class="hint">€/kg</span><input id="mat-new-price" type="number" min="0" step="any" value="0"></label></div><div class="actions"><button type="button" class="btn primary" id="mat-save">Material speichern</button><button type="button" class="btn secondary" id="mat-export">Materialliste als CSV</button></div><div id="mat-saved-list" class="saved-list"></div><div id="mat-status" class="statusline" role="status"></div><p class="helper">Standarddichten sind Näherungen. Eigene Pulverpreise bleiben lokal gespeichert.</p></div>
+  </section>
+  <section class="panel" id="panel-wb" role="tabpanel" aria-labelledby="tab-wb">
+    <div class="section-head"><div><h2>Wärmebehandlung</h2><p>Mobile Auswertung für Lösungsglühen und Warmauslagerung</p></div></div>
+    <div class="card"><h3>Projekt &amp; Prozess</h3><div class="grid"><label>Projektname <input id="wb-project-name" list="wb-project-list" maxlength="65" value="Testprojekt" type="text" placeholder="z. B. 260925_A20X"><datalist id="wb-project-list"></datalist></label><label>Teilprozess <select id="wb-process"><option value="solution">Lösungsglühen · 1–3 Stufen</option><option value="aging">Warmauslagerung · 1 Stufe</option></select></label></div><div class="actions"><button class="btn primary" type="button" id="wb-project-open">Projekt öffnen / anlegen</button><button class="btn secondary" type="button" id="wb-save">Programm speichern</button><button class="btn danger" type="button" id="wb-project-delete">Projekt löschen</button></div><p id="wb-project-info" class="helper">Messdaten und Programme werden pro Projekt und Teilprozess gespeichert.</p></div>
+    <div class="card"><h3>Messdatei importieren</h3><label>Temperaturdaten <span class="hint">CSV, TXT oder TSV · Zeitspalte + Temperaturkanäle</span><input id="wb-file" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain"></label><div class="grid" style="margin-top:11px"><label>Zeitspalte bei Zahlen <select id="wb-time-unit"><option value="sec">Sekunden</option><option value="min">Minuten</option><option value="hour">Stunden</option></select></label><label>Auswertungskanal <select id="wb-channel"></select></label><label>Diagrammzeit <select id="wb-axis"><option value="min">Minuten</option><option value="hour">Stunden</option></select></label><label>Diagramm ab Temperatur <span class="hint">°C · 0 = gesamte Kurve</span><input id="wb-start-temp" type="number" min="-100" max="1200" step="any" value="0"></label></div><div class="actions"><button id="wb-demo" class="btn secondary" type="button">Beispielkurve laden</button><button id="wb-clear-file" class="btn danger" type="button">Messdatei entfernen</button></div><div id="wb-file-status" class="message info" role="status">Noch keine Messdaten geladen.</div><div id="wb-channel-list" class="record-grid"></div></div>
+    <div class="card"><h3>WB-Programm / Grenzwerte</h3><div class="actions"><button id="wb-template-save" type="button" class="btn secondary">Vorlage speichern</button><button id="wb-template-load" type="button" class="btn secondary">Vorlage laden</button><button id="wb-to-timer" type="button" class="btn primary">Haltezeit → Timer</button></div><div id="wb-steps" class="wb-steps"></div><p class="helper">Für jede Stufe: Solltemperatur, getrennte ±Toleranzen und erforderliche Haltezeit. Bewertet wird die längste ununterbrochene Haltephase im Temperaturband der gewählten Messstelle. Ergebnisse sind keine automatische Prozessfreigabe.</p></div>
+    <div class="card"><h3>Messkurve</h3><div class="chart-frame"><svg id="wb-chart" viewBox="0 0 720 330" role="img" aria-label="Temperaturverlauf und Toleranzbänder"><text x="20" y="40" fill="#aec5da">Noch keine Messkurve geladen.</text></svg></div><div class="legend-line" id="wb-legend"></div><div class="small" id="wb-chart-tap" aria-live="polite">Tippe ins Diagramm, um einen Messwert abzulesen.</div></div>
+    <div class="card"><h3>Auswertung</h3><div class="results"><div class="stat accent"><div class="name">Aufzeichnungsdauer</div><div id="wb-duration" class="number">—</div><span class="unit">Stunden</span></div><div class="stat"><div class="name">Messpunkte</div><div id="wb-points" class="number">—</div></div><div class="stat"><div class="name">Minimum</div><div id="wb-min" class="number">—</div><span class="unit">°C · aktiver Kanal</span></div><div class="stat"><div class="name">Maximum</div><div id="wb-max" class="number">—</div><span class="unit">°C · aktiver Kanal</span></div></div><div id="wb-summary" class="wb-summary" style="margin-top:13px" aria-live="polite"></div><div class="actions"><button id="wb-report" type="button" class="btn primary">WB-Bericht (beide Prozesse) / PDF</button><button id="wb-csv" type="button" class="btn secondary">Auswertung als CSV</button></div><div id="wb-message" class="message" role="status"></div></div>
+    <p class="helper">Mobilversion des Wärmebehandlungswerkzeugs: CSV/TXT, bis zu 3 Lösungsglüh-Stufen und 1 Warmauslagerungs-Stufe, mehrere Kanäle, Programme, Auswertung und Bericht. Das bisherige Windows-Programm wird nicht direkt auf dem iPhone ausgeführt; Zugversuchs- und Excel-/PDF-Import sind hier noch nicht enthalten.</p>
+  </section>
+
+  <section class="panel" id="panel-waermezeit" role="tabpanel" aria-labelledby="tab-waermezeit">
+    <div class="section-head"><div><h2>Wärmezeit – Prozessplanung</h2><p>Die bisherige Wärmezeit-WebApp ist jetzt direkt in Becker Tools integriert.</p></div></div>
+    <div class="card">
+      <h3>Start oder Zielzeit berechnen</h3>
+      <div class="wz-mode" role="group" aria-label="Berechnungsart">
+        <button type="button" id="wz-mode-end" class="btn" aria-pressed="true">Zielzeit vorgeben</button>
+        <button type="button" id="wz-mode-start" class="btn secondary" aria-pressed="false">Startzeit vorgeben</button>
+      </div>
+      <div id="wz-end-block" style="margin-top:14px"><div class="grid">
+        <label>Gewünschtes Prozessende <span class="hint">Datum</span><input id="wz-end-date" type="date"></label>
+        <label>Uhrzeit <span class="hint">Prozessende</span><input id="wz-end-time" type="time" step="60"></label>
+      </div></div>
+      <div id="wz-start-block" hidden style="margin-top:14px"><div class="grid">
+        <label>Gewünschter Prozessstart <span class="hint">Datum</span><input id="wz-start-date" type="date"></label>
+        <label>Uhrzeit <span class="hint">Prozessstart</span><input id="wz-start-time" type="time" step="60"></label>
+      </div></div>
+    </div>
+    <div class="card">
+      <h3>Gespeicherte Programme</h3>
+      <label>Programm auswählen<select id="wz-programs"><option value="">Programm auswählen…</option></select></label>
+      <div class="actions"><button id="wz-save" type="button" class="btn primary">Programm speichern</button><button id="wz-delete" type="button" class="btn danger">Programm löschen</button></div>
+      <p class="helper">Programme werden lokal gespeichert und im vollständigen Becker-Tools-Backup berücksichtigt.</p>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap">
+        <h3 style="margin:0">Prozessschritte</h3><button id="wz-add" type="button" class="btn primary">+ Schritt</button>
+      </div>
+      <p class="helper">Aufheizen, Halten, Abkühlen, Warten oder Sonstiges. Temperaturen dienen der Dokumentation, die Zeit ergibt sich nur aus den eingetragenen Stunden und Minuten.</p>
+      <div id="wz-steps"></div>
+      <div class="actions"><button id="wz-preset" type="button" class="btn secondary">Beispiel laden</button><button id="wz-clear" type="button" class="btn danger">Alle Schritte löschen</button></div>
+    </div>
+    <div class="card">
+      <h3>Ergebnis &amp; Countdown</h3>
+      <div class="wz-kpis" aria-live="polite">
+        <div class="wz-kpi"><div class="wz-kpi-label">Gesamtdauer</div><div class="wz-kpi-val" id="wz-total">00:00 h</div></div>
+        <div class="wz-kpi"><div class="wz-kpi-label">Schritte</div><div class="wz-kpi-val" id="wz-count">0</div></div>
+        <div class="wz-kpi"><div class="wz-kpi-label">Start</div><div class="wz-kpi-val" id="wz-start-out">–</div></div>
+        <div class="wz-kpi"><div class="wz-kpi-label">Ziel / Ende</div><div class="wz-kpi-val" id="wz-end-out">–</div></div>
+        <div class="wz-kpi wz-kpi-wide"><div class="wz-kpi-label" id="wz-wait-label">Wartezeit bis Start</div><div class="wz-kpi-val" id="wz-wait">--:--:--</div></div>
+      </div>
+      <div id="wz-status" class="statusline" role="status" aria-live="polite"></div>
+      <div class="actions">
+        <button id="wz-ics" type="button" class="btn primary">📅 Kalenderdatei (.ics)</button>
+        <button id="wz-to-timer" type="button" class="btn secondary">Restzeit in Timer</button>
+        <button id="wz-to-wb" type="button" class="btn secondary">🌡 WB-Auswertung öffnen</button>
+      </div>
+    </div>
+    <div class="card"><h3>Zeitplan</h3><div id="wz-timeline"></div>
+      <p class="helper">Der Live-Countdown zeigt die Uhrzeit an; ein iPhone-Alarm bei geschlossener App ist nicht garantiert. Die Kalenderdatei enthält eine Erinnerung 10 Minuten vor dem Start. Keine Steuerung einer realen Ofenanlage.</p>
+    </div>
+  </section>
+  <section class="panel" id="panel-timer" role="tabpanel" aria-labelledby="tab-timer">
+    <div class="section-head"><div><h2>Timer &amp; Stoppuhr</h2><p>Für Schichtwechsel, Bauteilhandling und Wärmebehandlungen</p></div></div>
+    <div class="card"><div class="grid"><label>Modus <select id="timer-mode"><option value="countdown">Countdown</option><option value="stopwatch">Stoppuhr</option></select></label><label>Bezeichnung <input id="timer-label" type="text" maxlength="50" value="Arbeits-Timer" placeholder="z. B. Warmauslagerung"></label><label>Stunden <input id="timer-hours" min="0" max="999" value="0" type="number" step="1" inputmode="numeric"></label><label>Minuten <input id="timer-minutes" min="0" max="59" value="30" type="number" step="1" inputmode="numeric"></label><label>Sekunden <input id="timer-seconds" min="0" max="59" value="0" type="number" step="1" inputmode="numeric"></label></div><div class="timer-pills" style="margin-top:13px"><button class="btn secondary" type="button" data-preset="30">30 s</button><button class="btn secondary" type="button" data-preset="120">2 min</button><button class="btn secondary" type="button" data-preset="600">10 min</button><button class="btn secondary" type="button" data-preset="1800">30 min</button><button class="btn secondary" type="button" data-preset="3600">1 h</button><button class="btn secondary" type="button" data-preset="14400">4 h</button></div><div class="timer-display"><div id="timer-current-label" class="small">Arbeits-Timer</div><div id="timer-view" class="big-number" role="timer" aria-live="off">00:30:00</div><div id="timer-state" class="statusline" role="status">Bereit</div></div><div class="actions" style="justify-content:center"><button class="btn primary" id="timer-start" type="button">Start</button><button class="btn secondary" id="timer-pause" type="button">Pause</button><button class="btn secondary" id="timer-reset" type="button">Zurücksetzen</button><button class="btn secondary" id="timer-lap" type="button" hidden>Runde</button></div><ol id="timer-laps" class="timer-laps"></ol><div id="timer-error" class="message error" role="status"></div><p class="helper">Der Timer berechnet die verstrichene Zeit anhand der Uhrzeit auch beim App-Wechsel. Akustische Signale können auf iOS bei gesperrtem Bildschirm oder geschlossener WebApp nicht garantiert werden. Kein Ersatz für sicherheitskritische Prozessüberwachung.</p></div>
+  </section>
+  <section class="panel" id="panel-data" role="tabpanel" aria-labelledby="tab-data">
+    <div class="section-head"><div><h2>Profile &amp; Export</h2><p>Eigene Einstellungen sichern und Ergebnisse mitnehmen</p></div></div>
+    <div class="card"><h3>Parameterprofil speichern</h3><label>Profilname <span class="hint">Beispiel: SLM500 · AlSi10Mg · 30 µm</span><input id="profile-name" type="text" maxlength="65" placeholder="Mein Parameterprofil"></label><div class="actions"><button class="btn primary" id="profile-save" type="button">Profil speichern</button><button class="btn secondary" type="button" id="reset-all">Beispielwerte laden</button></div><div class="saved-list" id="saved-list" aria-live="polite"></div></div>
+    <div class="card"><h3>Export und Sicherung</h3><div class="actions"><button id="export-csv" type="button" class="btn primary">Ergebnisse als CSV</button><button id="export-json" type="button" class="btn secondary">Backup als JSON</button><button id="import-json" type="button" class="btn secondary">Backup importieren</button><button id="print" type="button" class="btn secondary">Drucken / PDF</button></div><input id="file-input" type="file" accept=".json,application/json" hidden><p class="storage-note">Deine Werte und Profile werden lokal im Browser gespeichert, sofern Safari dies erlaubt. Sie werden nicht auf einen Server übertragen. Für einen Gerätewechsel kannst du ein JSON-Backup exportieren.</p><div id="data-status" class="statusline" role="status"></div></div>
+    <div class="card"><h3>Backup</h3><p class="storage-note">Das JSON-Backup umfasst auch Materialdatenbank, Vergleiche, WB-Projekte, Temperaturmessungen und Wärmezeit-Pläne und -Programme. Große Messdateien können entsprechend große Backup-Dateien ergeben. Ältere V1.0-Backups können weiter importiert werden.</p></div>
+    <div class="card"><h3>Hinweise zur Berechnung</h3><p class="storage-note">Die Energiedichte ist nur eine Kenngröße; Spotgröße, Strahlprofil, Scanstrategie, Konturen und Material beeinflussen das Ergebnis. Der Bauzeitrechner verwendet den theoretischen Hatch-Volumenstrom mit einem frei wählbaren Wirkungsgrad. Für belastbare Angebote den Baujob im Slicer simulieren und die Zeiten kalibrieren.</p></div>
+  </section>
+  <footer>Becker Tools · V2.1 · Offlinefähige WebApp<br>Berechnungen lokal auf deinem Gerät · Keine Prozessfreigabe</footer>
+</main>
+<div id="wb-print-report"></div>
+<script>
+(() => {
+  'use strict';
+  const PREFIX='becker-am-v1';
+  const DEFAULTS={
+    power:350,speed:1400,hatch:0.15,layer:30,target:55,
+    machine:'SLM500',height:80,pieces:12,volume:18,support:15,efficiency:65,recoat:12,fixed:60,limit:168,
+    material:'AlSi10Mg',density:2.67,powderPrice:90,powderLoss:5,machineRate:85,setupCost:70,postCost:12,markup:20
+  };
+  const DENSITIES={AlSi10Mg:2.67,A20X:2.80,Ti64:4.43,'316L':7.99};
+  const inputs={};
+  document.querySelectorAll('[data-field]').forEach(el=>{inputs[el.dataset.field]=el;});
+  let profiles=[];let lastCalc=null;let saveTimeout=null;
+  const el=id=>document.getElementById(id);
+  const fmt=(x,d=2)=>Number.isFinite(x)?new Intl.NumberFormat('de-DE',{maximumFractionDigits:d,minimumFractionDigits:0}).format(x):'—';
+  const euro=x=>Number.isFinite(x)?new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(x):'—';
+  const num=k=>{const raw=inputs[k].value.trim().replace(',','.');if(!raw)return NaN;return Number(raw);};
+  const setResult=(id,value,dec=2)=>{el(id).textContent=fmt(value,dec);};
+  const valid=(k,min,max=1e12)=>{const x=num(k);return Number.isFinite(x)&&x>=min&&x<=max;};
+  const requireFields=(items)=>{for(const [k,min,max] of items){if(!valid(k,min,max))return `${inputs[k].closest('label').childNodes[0].textContent.trim()}: bitte einen gültigen Wert (${min} bis ${max}) eingeben.`;}return '';};
+  const report=(id,text,variant='error')=>{const node=el(id);node.textContent=text;node.className=`message ${variant}`;};
+  const bindNav=()=>{
+    const tabs=Array.from(document.querySelectorAll('[data-tab]'));
+    tabs.forEach(btn=>btn.addEventListener('click',()=>{
+      tabs.forEach(b=>b.setAttribute('aria-selected',String(b===btn)));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${btn.dataset.tab}`));
+    }));
+  };
+  const allValues=()=>{const vals={};for(const k in inputs)vals[k]=inputs[k].value;return vals;};
+  const useValues=(data,includeDefaults=true)=>{
+    for(const k in inputs){
+      if(Object.prototype.hasOwnProperty.call(data,k)){
+        const val=data[k];
+        if(typeof val==='number'||typeof val==='string')inputs[k].value=String(val);
+      } else if(includeDefaults){inputs[k].value=String(DEFAULTS[k]);}
+    }
+    compute();saveLater();
+  };
+  const loadStorage=()=>{
+    try{
+      const v=JSON.parse(localStorage.getItem(PREFIX+'-current')||'null');if(v&&typeof v==='object'&&!Array.isArray(v))useValues(v);
+      const p=JSON.parse(localStorage.getItem(PREFIX+'-profiles')||'[]');if(Array.isArray(p))profiles=p.filter(o=>o&&typeof o.name==='string'&&o.values&&typeof o.values==='object').slice(0,20);
+    }catch(err){el('storage-badge').textContent='◌ Ohne Speicher';}
+    drawProfiles();
+  };
+  const saveLater=()=>{
+    if(saveTimeout)clearTimeout(saveTimeout);
+    saveTimeout=setTimeout(()=>{
+      try{localStorage.setItem(PREFIX+'-current',JSON.stringify(allValues()));el('storage-badge').textContent='● Lokal';}
+      catch(err){el('storage-badge').textContent='◌ Ohne Speicher';}
+    },250);
+  };
+  const persistProfiles=()=>{try{localStorage.setItem(PREFIX+'-profiles',JSON.stringify(profiles));}catch(e){el('data-status').textContent='Speichern im Browser nicht verfügbar. Bitte JSON-Backup nutzen.';}};
+  const clearLaser=()=>['res-ved','res-line','res-area','res-rate','res-speed-target','res-power-target'].forEach(id=>el(id).textContent='—');
+  const clearTime=()=>{
+    ['res-total-time','res-layers','res-total-volume','res-effective-rate'].forEach(id=>el(id).textContent='—');
+    ['res-scan-time','res-recoat-time','res-fixed-time'].forEach(id=>el(id).textContent='—');
+  };
+  const clearCost=()=>{
+    ['res-direct','res-unit-cost','res-unit-price','res-mass'].forEach(id=>el(id).textContent='—');
+    ['res-machine-eur','res-powder-eur','res-post-eur','res-setup-eur','res-total-price'].forEach(id=>el(id).textContent='—');
+    ['bar-machine','bar-powder','bar-post','bar-setup'].forEach(id=>el(id).style.width='0%');
+  };
+  const compute=()=>{
+    lastCalc={};
+    const laserError=requireFields([['power',0.01,100000],['speed',0.01,1000000],['hatch',0.001,20],['layer',0.1,1000]]);
+    let rate=NaN;
+    if(laserError){clearLaser();report('laser-error',laserError);}
+    else {
+      const P=num('power'),v=num('speed'),h=num('hatch'),t=num('layer')/1000;
+      const ev=P/(v*h*t), line=P/v, area=P/(v*h);rate=v*h*t*3.6;
+      setResult('res-ved',ev,2);setResult('res-line',line,3);setResult('res-area',area,2);setResult('res-rate',rate,2);
+      Object.assign(lastCalc,{ev,line,area,rate});report('laser-error','');
+    }
+    const targetError=requireFields([['target',0.01,100000]]);
+    if(laserError||targetError){el('res-speed-target').textContent='—';el('res-power-target').textContent='—';report('target-error',targetError||'Bitte zuerst gültige Laserparameter eingeben.');}
+    else {
+      const t=num('layer')/1000,h=num('hatch'),target=num('target');
+      const speedTarget=num('power')/(target*h*t),powerTarget=target*num('speed')*h*t;
+      setResult('res-speed-target',speedTarget,1);setResult('res-power-target',powerTarget,1);
+      lastCalc.speedTarget=speedTarget;lastCalc.powerTarget=powerTarget;
+      report('target-error','');
+    }
+    const timeError=requireFields([['height',0.01,5000],['pieces',1,100000],['volume',0.00001,10000000],['support',0,500],['efficiency',1,100],['recoat',0,10000],['fixed',0,100000],['limit',0.1,100000]]);
+    if(laserError||timeError||!Number.isInteger(num('pieces'))||!Number.isFinite(rate)||rate<=0){
+      clearTime();report('time-error',timeError||(!Number.isInteger(num('pieces'))?'Bauteilanzahl: bitte eine ganze Zahl eingeben.':'Bitte zuerst gültige Laserparameter eingeben.'));
+      report('time-warning','');
+    } else {
+      const pieces=num('pieces'), volume=num('volume')*pieces*(1+num('support')/100), layers=Math.ceil(num('height')/(num('layer')/1000));
+      const effectiveRate=rate*num('efficiency')/100, scan=volume/effectiveRate, recoat=layers*num('recoat')/3600, fixed=num('fixed')/60, total=scan+recoat+fixed;
+      if(![volume,layers,scan,recoat,total].every(Number.isFinite)||total>1e10){clearTime();report('time-error','Wertebereich überschritten. Bitte kleinere Eingaben wählen.');report('time-warning','');}
+      else{
+        setResult('res-total-time',total,2);setResult('res-layers',layers,0);setResult('res-total-volume',volume,2);setResult('res-effective-rate',effectiveRate,2);
+        el('res-scan-time').textContent=`${fmt(scan,2)} h`;el('res-recoat-time').textContent=`${fmt(recoat,2)} h`;el('res-fixed-time').textContent=`${fmt(fixed,2)} h`;
+        Object.assign(lastCalc,{pieces,volume,layers,effectiveRate,scan,recoat,fixed,total});report('time-error','');
+        if(total>num('limit'))report('time-warning',`⚠️ Geschätzte Bauzeit über deiner Grenze von ${fmt(num('limit'),1)} h.`, 'warn');
+        else report('time-warning',`✓ Die Zeit liegt unter deiner eingestellten Grenze von ${fmt(num('limit'),1)} h.`,'');
+      }
+    }
+    const costError=requireFields([['density',0.01,100],['powderPrice',0,10000000],['powderLoss',0,500],['machineRate',0,10000000],['setupCost',0,100000000],['postCost',0,100000000],['markup',0,1000]]);
+    if(costError||!Number.isFinite(lastCalc.total)){
+      clearCost();report('cost-error',costError||'Bitte zuerst gültige Laser- und Baujobdaten eingeben.');
+    }else{
+      const mass=lastCalc.volume*num('density')/1000*(1+num('powderLoss')/100);
+      const mCost=lastCalc.total*num('machineRate'),pCost=mass*num('powderPrice'),post=lastCalc.pieces*num('postCost'),setup=num('setupCost');
+      const direct=mCost+pCost+post+setup,price=direct*(1+num('markup')/100);
+      if(![mass,mCost,pCost,post,setup,direct,price].every(Number.isFinite)||price>1e12){clearCost();report('cost-error','Wertebereich überschritten. Bitte kleinere Eingaben wählen.');}
+      else {
+        el('res-direct').textContent=euro(direct);el('res-unit-cost').textContent=euro(direct/lastCalc.pieces);
+        el('res-unit-price').textContent=euro(price/lastCalc.pieces);setResult('res-mass',mass,3);
+        el('res-machine-eur').textContent=euro(mCost);el('res-powder-eur').textContent=euro(pCost);
+        el('res-post-eur').textContent=euro(post);el('res-setup-eur').textContent=euro(setup);el('res-total-price').textContent=euro(price);
+        const sum=direct>0?direct:1;
+        [['bar-machine',mCost],['bar-powder',pCost],['bar-post',post],['bar-setup',setup]].forEach(([id,v])=>el(id).style.width=(v/sum*100)+'%');
+        Object.assign(lastCalc,{mass,mCost,pCost,post,setup,direct,price});report('cost-error','');
+      }
+    }
+  };
+  const drawProfiles=()=>{
+    const wrap=el('saved-list');wrap.replaceChildren();
+    if(!profiles.length){const empty=document.createElement('p');empty.className='helper';empty.textContent='Noch keine Profile gespeichert.';wrap.append(empty);return;}
+    profiles.forEach((p,i)=>{
+      const row=document.createElement('div');row.className='saved-item';
+      const name=document.createElement('div');name.className='name';name.textContent=p.name;
+      const load=document.createElement('button');load.type='button';load.textContent='Laden';load.addEventListener('click',()=>{useValues(p.values);el('data-status').textContent=`Profil „${p.name}“ geladen.`;});
+      const del=document.createElement('button');del.type='button';del.className='delete';del.textContent='Löschen';del.setAttribute('aria-label',`Profil ${p.name} löschen`);del.addEventListener('click',()=>{if(confirm(`Profil „${p.name}“ wirklich löschen?`)){profiles.splice(i,1);persistProfiles();drawProfiles();}});
+      row.append(name,load,del);wrap.append(row);
+    });
+  };
+  const download=(content,filename,mimetype)=>{
+    const blob=new Blob([content],{type:mimetype});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);
+  };
+  const stamp=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
+  const exportCSV=()=>{
+    compute();
+    const items=[['Becker Tools','LPBF / SLM Rechner V2.1'],['Datum',new Date().toLocaleString('de-DE')],[],['Eingaben','Wert','Einheit']];
+    const labels={power:['Laserleistung','W'],speed:['Scangeschwindigkeit','mm/s'],hatch:['Hatchabstand','mm'],layer:['Schichtdicke','µm'],target:['Ziel-Energiedichte','J/mm³'],machine:['Anlage',''],height:['Bauhöhe','mm'],pieces:['Bauteile','Stück'],volume:['Volumen je Bauteil','cm³'],support:['Supportanteil','%'],efficiency:['Scananteil','%'],recoat:['Beschichtung je Schicht','s'],fixed:['Zusatzzeit je Job','min'],limit:['Bauzeitgrenze','h'],material:['Material',''],density:['Dichte','g/cm³'],powderPrice:['Pulverpreis','€/kg'],powderLoss:['Pulververlust','%'],machineRate:['Maschinenstundensatz','€/h'],setupCost:['Rüstkosten','€'],postCost:['Nachbearbeitung je Stück','€'],markup:['Kalkulationszuschlag','%']};
+    for(const k in labels){items.push([labels[k][0],inputs[k].value,labels[k][1]]);}
+    items.push([],['Ergebnisse','Wert','Einheit']);
+    const results=[['Energiedichte',lastCalc.ev,'J/mm³'],['Linienenergie',lastCalc.line,'J/mm'],['Flächenenergie',lastCalc.area,'J/mm²'],['Theoretischer Volumenstrom',lastCalc.rate,'cm³/h'],['Schichten',lastCalc.layers,''],['Buildvolumen inklusive Supports',lastCalc.volume,'cm³'],['Scanzeit',lastCalc.scan,'h'],['Beschichtungszeit',lastCalc.recoat,'h'],['Gesamtbauzeit',lastCalc.total,'h'],['Pulvermasse',lastCalc.mass,'kg'],['Maschinenkosten',lastCalc.mCost,'€'],['Pulverkosten',lastCalc.pCost,'€'],['Nachbearbeitungskosten',lastCalc.post,'€'],['Rüstkosten',lastCalc.setup,'€'],['Direkte Jobkosten',lastCalc.direct,'€'],['Preis mit Zuschlag',lastCalc.price,'€']];
+    results.forEach(([k,v,unit])=>items.push([k,Number.isFinite(v)?String(v).replace('.',','):'nicht berechnet',unit]));
+    items.push([],['Hinweis','Näherung / keine Prozessfreigabe']);
+    const csv='\ufeff'+items.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';')).join('\r\n');
+    download(csv,`Becker_Tools_LPBF_${stamp()}.csv`,'text/csv;charset=utf-8');
+    el('data-status').textContent='CSV-Datei erstellt.';
+  };
+  const init=()=>{
+    bindNav();
+    Object.entries(inputs).forEach(([k,node])=>{
+      node.addEventListener('input',()=>{
+        if(k==='density' && inputs.material.value!=='custom'){inputs.material.value='custom';}
+        compute();saveLater();
+      });
+      node.addEventListener('change',()=>{
+        if(k==='material' && Object.prototype.hasOwnProperty.call(DENSITIES,node.value))inputs.density.value=DENSITIES[node.value];
+        compute();saveLater();
+      });
+    });
+    el('use-speed').addEventListener('click',()=>{if(lastCalc&&Number.isFinite(lastCalc.speedTarget)&&lastCalc.speedTarget>0){inputs.speed.value=String(Number(lastCalc.speedTarget.toPrecision(10)));compute();saveLater();}});
+    el('use-power').addEventListener('click',()=>{if(lastCalc&&Number.isFinite(lastCalc.powerTarget)&&lastCalc.powerTarget>0){inputs.power.value=String(Number(lastCalc.powerTarget.toPrecision(10)));compute();saveLater();}});
+    el('profile-save').addEventListener('click',()=>{
+      const name=el('profile-name').value.trim();if(!name){el('data-status').textContent='Bitte einen Profilnamen eingeben.';return;}
+      const ix=profiles.findIndex(p=>p.name.toLowerCase()===name.toLowerCase());
+      if(ix!==-1){if(!confirm(`Profil „${name}“ überschreiben?`))return;profiles.splice(ix,1);}
+      profiles.unshift({name,values:allValues()});profiles=profiles.slice(0,20);persistProfiles();drawProfiles();el('data-status').textContent=`Profil „${name}“ gespeichert.`;
+    });
+    el('reset-all').addEventListener('click',()=>{if(confirm('Alle Eingaben auf die Rechenbeispiele zurücksetzen?')){useValues(DEFAULTS);el('data-status').textContent='Beispielwerte geladen.';}});
+    el('export-csv').addEventListener('click',exportCSV);
+    el('export-json').addEventListener('click',async()=>{const extras=window.beckerExtras?await window.beckerExtras.exportState():null;const data={format:'BeckerTools-AM',version:2,exported:new Date().toISOString(),current:allValues(),profiles,extras};download(JSON.stringify(data),`Becker_Tools_Backup_${stamp()}.json`,'application/json');el('data-status').textContent='Vollständige Backup-Datei erstellt.';});
+    el('import-json').addEventListener('click',()=>el('file-input').click());
+    el('file-input').addEventListener('change',async event=>{
+      const file=event.target.files?.[0];if(!file)return;
+      try{
+        if(file.size>70000000)throw Error('Datei ist zu groß (max. 70 MB).');
+        const data=JSON.parse(await file.text());if(data.format!=='BeckerTools-AM'||![1,2].includes(data.version)||!data.current||typeof data.current!=='object'||Array.isArray(data.current))throw Error('Nicht unterstütztes Becker-Tools-Backup.');
+        if(!confirm('Aktuelle Werte und gespeicherte Profile durch das Backup ersetzen?'))return;
+        const ps=Array.isArray(data.profiles)?data.profiles:[];
+        profiles=ps.filter(p=>p&&typeof p.name==='string'&&p.name.length<=65&&p.values&&typeof p.values==='object'&&!Array.isArray(p.values)).slice(0,20);
+        useValues(data.current);persistProfiles();drawProfiles();if(data.version===2&&data.extras&&window.beckerExtras)await window.beckerExtras.importState(data.extras);el('data-status').textContent='Backup erfolgreich eingelesen.';
+      }catch(err){el('data-status').textContent=`Import fehlgeschlagen: ${err.message}`;}
+      finally{event.target.value='';}
+    });
+    el('print').addEventListener('click',()=>window.print());
+    loadStorage();compute();
+    if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    }
+  };
+  init();
+})();
+</script>
+<script src="extras.js"></script>
+<script src="waermezeit.js"></script>
+</body>
+</html>

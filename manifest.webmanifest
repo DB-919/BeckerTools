@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Becker Tools – LPBF, Wärmebehandlung, Wärmezeit & Timer",
+  "short_name": "Becker Tools",
+  "description": "Parametervergleich, Bauzeit, Kosten, Bauplatten, WB-Auswertung, Wärmezeit-Prozessplanung und Timer direkt auf dem iPhone.",
+  "lang": "de-DE",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1019",
+  "theme_color": "#101724",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose":"any maskable"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose":"any maskable"}
+  ]
+}
