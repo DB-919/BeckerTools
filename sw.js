@@ -1,4 +1,4 @@
-const CACHE_NAME='becker-tools-v30-2026-10-09';
+const CACHE_NAME='becker-tools-v31-2026-10-09';
 const FILES=['./','./index.html','./extras.js','./waermezeit.js','./quote.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting()));

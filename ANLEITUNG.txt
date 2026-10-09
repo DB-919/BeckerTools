@@ -1,4 +1,4 @@
-BECKER TOOLS V3.0 – iPHONE-WEBAPP
+BECKER TOOLS V3.1 – iPHONE-WEBAPP
 ================================
 LPBF – Bauteile, STL, frei positionierbare Bauplatte, Mehrlaser-Zeiten, Kalkulation und Kundenangebot.
 Alle bestehenden Module aus V2.1 (Laser, einfacher Referenz-Bauzeitrechner, Kosten,
@@ -86,3 +86,13 @@ VORHANDENE FUNKTIONEN V2.1
 Wärmezeit: Prozesszeitenplaner, Programmvorlagen, Kalenderexport,
 Timerübernahme. WB-Auswertung: CSV-Temperaturen, Lösungsglühen,
 Warmauslagerung, Report. Plus vorhandene LPBF-/Materialwerkzeuge.
+
+V3.1 LASERKONFIGURATION
+- Laser in einer Reihe: je Scanner X-von/bis und Y-von/bis sowie Aktiv/Inaktiv.
+- Beispiel-Scanfelder mit editierbarer nominaler Nachbar-Ueberlappung automatisch erzeugen; auf reale Bereiche abgleichen.
+- Markierte Ueberlappungen erlauben lastausgleichende Zuteilung ohne doppeltes Zaehlen.
+- Bauzeit beruecksichtigt pro Hoehenabschnitt das jeweils kritische Scanner-Volumen.
+- Fehlerhafte Scannerfelder / nicht abgedeckte Bauteile verhindern eine Kalkulation.
+- PDF erst nach aktivem Haken fuer kontrollierte echte Maschinenfelder.
+- Scannerfelder werden je Maschine und Projekt gespeichert, JSON-Backup enthaelt die Konfiguration.
+- SCHEMATISCHE STARTWERTE: Scannerbereich, Ueberlappung und Effizienz sind keine Herstellerspezifikationen!

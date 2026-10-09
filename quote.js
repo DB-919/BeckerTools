@@ -1,4 +1,4 @@
-/* Becker Tools V3.0 – lokaler Angebotsworkflow, kein Slicer */
+/* Becker Tools V3.1 – lokaler Angebotsworkflow, kein Slicer */
 (()=>{'use strict';
   const $=id=>document.getElementById(id);
   if(!$('panel-quote'))return;
@@ -8,9 +8,17 @@
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const readNum=id=>Number(String($(id).value).replace(',','.'));
   const vNum=(id,min,max)=>{const raw=$(id).value.trim();if(!raw)throw Error('Bitte alle Zahlenfelder ausfüllen.');const x=Number(raw.replace(',','.'));if(!Number.isFinite(x)||x<min||x>max)throw Error(`${$(''+id).closest('label')?.childNodes[0]?.textContent?.trim()||id}: zulässig ${min}–${max}.`);return x;};
+  // Standardwerte sind absichtlich nur ein SCHEMA. Reale Scannerfelder unterscheiden sich nach Konfiguration.
+  const autoScans=(w,h,n,overlap=30,direction='x')=>{
+    const length=direction==='y'?h:w;
+    const width=(length+(n-1)*overlap)/n,step=width-overlap;
+    return Array.from({length:n},(_,i)=>direction==='y'?
+      {enabled:true,x0:0,x1:w,y0:+(i*step).toFixed(3),y1:+(i*step+width).toFixed(3)}:
+      {enabled:true,x0:+(i*step).toFixed(3),x1:+(i*step+width).toFixed(3),y0:0,y1:h});
+  };
   const defaults=()=>({
     customer:'',number:`AM-${new Date().getFullYear()}-001`,project:'',notes:'',machine:'500I',material:'AlSi10Mg',
-    machines:{'500I':{w:500,h:280,lasers:4},'500II':{w:500,h:280,lasers:4},'500III':{w:500,h:280,lasers:4},'280':{w:280,h:280,lasers:2}},
+    machines:{'500I':{w:500,h:280,lasers:4,overlap:30,verified:false,scans:autoScans(500,280,4)},'500II':{w:500,h:280,lasers:4,overlap:30,verified:false,scans:autoScans(500,280,4)},'500III':{w:500,h:280,lasers:4,overlap:30,verified:false,scans:autoScans(500,280,4)},'280':{w:280,h:280,lasers:2,overlap:30,verified:false,scans:autoScans(280,280,2)}},
     parts:[],beds:[{id:1,items:[]}],bedId:1,uid:0,
     params:{power:350,speed:1400,hatch:.15,layer:30,eff:65,recoat:12,fixed:60,support:15,maxTime:168,margin:10,gap:5},
     cost:{rate:85,powder:90,density:2.67,loss:5,setup:70,post:12,wb:0,qa:0,shipping:0,risk:5,profit:20},
@@ -33,7 +41,16 @@
     const base=defaults();
     if(!data||typeof data!=='object')data=base;
     for(const k of ['machines','params','cost','offer'])data[k]={...base[k],...(data[k]||{})};
-    for(const k in base.machines)data.machines[k]={...base.machines[k],...(data.machines[k]||{})};
+    for(const k in base.machines){
+      const old=data.machines[k]||{};
+      data.machines[k]={...base.machines[k],...old};
+      const m=data.machines[k];m.lasers=base.machines[k].lasers;
+      if(!Array.isArray(m.scans)||m.scans.length!==m.lasers)m.scans=autoScans(m.w,m.h,m.lasers,30);
+      else m.scans=m.scans.map((s,i)=>({...base.machines[k].scans[i],...s}));
+      if(typeof m.verified!=='boolean')m.verified=false;
+      if(m.direction!=='x'&&m.direction!=='y')m.direction='x';
+      if(!Number.isFinite(m.overlap))m.overlap=30;
+    }
     if(!Array.isArray(data.parts))data.parts=[];
     if(!Array.isArray(data.beds)||!data.beds.length)data.beds=base.beds;
     data.parts=data.parts.slice(0,80);data.beds=data.beds.slice(0,12).map(b=>({id:b.id||1,items:Array.isArray(b.items)?b.items.slice(0,120):[]}));
@@ -54,8 +71,41 @@
     Object.entries(offerFields).forEach(([k,id])=>$(id).value=data.offer[k]||'');
     $('qt-bed-w').value=machine().w;$('qt-bed-h').value=machine().h;
     $('qt-machine-label').textContent=machineNames[data.machine];
-    $('qt-zones-note').textContent=`${machine().lasers} Laser · idealisierte ${machine().lasers===4?'2×2':'2×1'}-Zonen ohne überlappende Laserarbeitsbereiche. Reale Scanfelder vor Angebot prüfen.`;
+    scanUI();
     drawAll();
+  };
+  const scanMessage=()=>{
+    const m=machine();const messages=[];
+    if(!m.scans.some(s=>s.enabled))messages.push('Kein Laser aktiviert.');
+    for(let i=0;i<m.scans.length;i++){
+      const s=m.scans[i];
+      if(![s.x0,s.x1,s.y0,s.y1].every(Number.isFinite)||s.x0<0||s.y0<0||s.x1>m.w+.001||s.y1>m.h+.001||s.x1<=s.x0||s.y1<=s.y0){
+        messages.push(`L${i+1}: Scanbereich muss innerhalb der Platte liegen (X 0–${fmt(m.w)} / Y 0–${fmt(m.h)} mm).`);
+      }
+    }
+    if(!m.verified)messages.push('Scannerfelder noch nicht als geprüft bestätigt: PDF-Angebot gesperrt.');
+    return messages;
+  };
+  const scanUI=()=>{
+    const m=machine();
+    $('qt-overlap').value=Number.isFinite(m.overlap)?m.overlap:30;
+    $('qt-direction').value=m.direction||'x';
+    $('qt-scans-verified').checked=!!m.verified;
+    $('qt-active-badge').textContent=`${m.scans.filter(s=>s.enabled).length}/${m.lasers} aktiv`;
+    $('qt-scan-rows').innerHTML=m.scans.map((s,i)=>`<div class="qt-scanrow">
+      <div class="qt-scanhead"><strong>Laser ${i+1}</strong><label><input data-scan-active="${i}" type="checkbox" ${s.enabled?'checked':''}> Aktiv</label></div>
+      <div class="qt-scanfields">${[['x0','X von'],['x1','X bis'],['y0','Y von'],['y1','Y bis']].map(([field,label])=>`<label>${label} (mm)<input data-scan-id="${i}" data-scan-field="${field}" type="number" min="0" step="0.1" value="${Number.isFinite(s[field])?s[field]:''}"></label>`).join('')}</div>
+    </div>`).join('');
+    $('qt-zones-note').textContent=`${m.scans.filter(s=>s.enabled).length} von ${m.lasers} Lasern aktiv · Scannerfelder auf der Bauplatte werden maßstäblich gezeichnet; Überlappungen heller dargestellt.`;
+    $('qt-scan-warning').textContent=scanMessage().join(' ')||'✓ Aktive Scannerfelder geprüft. In Überlappungen kann die Belichtungsarbeit auf mehrere Laser aufgeteilt werden.';
+    $('qt-scan-warning').className=scanMessage().length?'message warn':'message';
+  };
+  const markScanUnverified=()=>{machine().verified=false;$('qt-scans-verified').checked=false;};
+  const scanStatus=()=>{
+    const m=machine();$('qt-active-badge').textContent=`${m.scans.filter(s=>s.enabled).length}/${m.lasers} aktiv`;
+    $('qt-zones-note').textContent=`${m.scans.filter(s=>s.enabled).length} von ${m.lasers} Lasern aktiv · ${m.direction==='y'?'Y':'X'} in Reihe, Überlappungen in hellen Flächen.`;
+    $('qt-scan-warning').textContent=scanMessage().join(' ')||'✓ Aktive Scannerfelder geprüft.';
+    $('qt-scan-warning').className=scanMessage().length?'message warn':'message';
   };
   const applyMaterial=()=>{if(matDens[data.material]){data.cost.density=matDens[data.material];$('qt-density').value=data.cost.density;}};
   const redrawParts=()=>{
@@ -224,7 +274,7 @@
       for(let y=margin+rh/2;y<=m.h-margin-rh/2+0.01;y+=stepSize){
         for(let x=margin+rw/2;x<=m.w-margin-rw/2+0.01;x+=stepSize){
           const candidate={id:'__placement_candidate__',partId:p.id,x,y,rot};
-          if(validItem(bed,candidate)){const item=makeItem(p,x,y,rot);if(insert)bed.items.push(item);return item;}
+          if(validItem(bed,candidate)&&hasScannerCoverage(p,candidate,7)){const item=makeItem(p,x,y,rot);if(insert)bed.items.push(item);return item;}
         }
       }
     }
@@ -269,13 +319,31 @@
     const svg=$('qt-svg'),m=machine(),bed=getBed();
     svg.setAttribute('viewBox',`-3 -3 ${m.w+6} ${m.h+6}`);svg.replaceChildren();
     svgElement('rect',{x:0,y:0,width:m.w,height:m.h,rx:1.8,fill:'#122337',stroke:'#7fa9c1','stroke-width':1.7},svg);
-    const cx=m.w/2,cy=m.h/2;
     if($('qt-show-zones').value==='yes'){
-      const rects=m.lasers===4?[[0,0,cx,cy],[cx,0,cx,cy],[0,cy,cx,cy],[cx,cy,cx,cy]]:[[0,0,cx,m.h],[cx,0,cx,m.h]];
-      rects.forEach(([x,y,w,h],i)=>{
-        svgElement('rect',{x,y,width:w,height:h,fill:i%2===0?'#2a4860':'#25415d','fill-opacity':.28,stroke:'#7896ad','stroke-width':.7,'stroke-dasharray':'4 4'},svg);
-        const t=svgElement('text',{x:x+4,y:y+12,fill:'#91a9be','font-size':Math.max(7,Math.min(12,m.w/50))},svg);t.textContent=`L${i+1}`;
+      const colors=['#3c91c4','#61a887','#a78bd1','#ce9e63'];
+      m.scans.forEach((s,i)=>{
+        if(![s.x0,s.x1,s.y0,s.y1].every(Number.isFinite)||s.x1<=s.x0||s.y1<=s.y0)return;
+        svgElement('rect',{x:s.x0,y:s.y0,width:s.x1-s.x0,height:s.y1-s.y0,fill:colors[i],
+          'fill-opacity':s.enabled?.22:.035,stroke:s.enabled?colors[i]:'#7d8590',
+          'stroke-opacity':s.enabled?1:.45,'stroke-width':1.2,'stroke-dasharray':s.enabled?'none':'4 4'},svg);
       });
+      // Intersections are distinct and intentionally brighter than a single scan area.
+      m.scans.forEach((a,i)=>m.scans.slice(i+1).forEach(b=>{
+        if(!a.enabled||!b.enabled)return;
+        const x=Math.max(a.x0,b.x0),y=Math.max(a.y0,b.y0),w=Math.min(a.x1,b.x1)-x,h=Math.min(a.y1,b.y1)-y;
+        if(w>0&&h>0)svgElement('rect',{x,y,width:w,height:h,fill:'#a8eee1','fill-opacity':.27,'pointer-events':'none'},svg);
+      }));
+      m.scans.forEach((s,i)=>{const x=Math.max(1,s.x0)+3,y=Math.max(0,s.y0)+12;
+        if(x>m.w-10||y>m.h-3)return;
+        const t=svgElement('text',{x,y,fill:s.enabled?'#e6f5ff':'#98a0ae','font-size':Math.max(9,Math.min(13,m.w/44)),'font-weight':'700'},svg);
+        t.textContent=`L${i+1}${s.enabled?'':' ×'}`;
+      });
+      // Uncovered regions are gridded in red (only when not covered by any active scanner).
+      const nx=Math.max(24,Math.round(m.w/8)),ny=Math.max(10,Math.round(m.h/12));
+      for(let yy=0;yy<ny;yy++)for(let xx=0;xx<nx;xx++){
+        const x=(xx+.5)*m.w/nx,y=(yy+.5)*m.h/ny;
+        if(!activeMask(x,y,m))svgElement('rect',{x:xx*m.w/nx,y:yy*m.h/ny,width:m.w/nx+.01,height:m.h/ny+.01,fill:'#dc485e','fill-opacity':.24,'pointer-events':'none'},svg);
+      }
     }
     const margin=Math.max(0,Number(data.params.margin)||0);
     if(margin>0&&margin<m.w/2&&margin<m.h/2)svgElement('rect',{x:margin,y:margin,width:m.w-2*margin,height:m.h-2*margin,rx:1,fill:'none',stroke:'#b7d3dd','stroke-dasharray':'5 3','stroke-width':.8},svg);
@@ -322,23 +390,58 @@
     $('qt-layout-status').textContent=(()=>{const e=validateLayout();return e.length?e.slice(0,4).join(' '):'✓ Alle Bauteile platziert und Abstände eingehalten.';})();
     $('qt-layout-status').className=validateLayout().length?'message warn':'message';
   };
-  const laserZone=(x,y,m)=>m.lasers===4?(y>=m.h/2?2:0)+(x>=m.w/2?1:0):(x>=m.w/2?1:0);
-  const fractions=(p,item)=>{
-    const m=machine(),fr=new Array(m.lasers).fill(0),loops=normLoops(p),n=12;
+  // A point in an overlap is eligible for several scanners. Use a bitmask, not a fixed zone.
+  const activeMask=(x,y,m)=>m.scans.reduce((mask,s,i)=>mask|(s.enabled&&x>=s.x0-1e-7&&x<=s.x1+1e-7&&y>=s.y0-1e-7&&y<=s.y1+1e-7?(1<<i):0),0);
+  const fractions=(p,item,n=12)=>{
+    const m=machine(),fr=new Float64Array(1<<m.lasers),loops=normLoops(p);
     let samples=0;
     for(let row=0;row<n;row++)for(let col=0;col<n;col++){
       const pt=[(col+.5)/n,(row+.5)/n];if(!insideAny(pt,loops))continue;
-      const [x,y]=pointWorld(pt,p,item),zone=laserZone(x,y,m);
-      fr[zone]++;samples++;
+      const [x,y]=pointWorld(pt,p,item);
+      fr[activeMask(x,y,m)]++;samples++;
     }
-    if(!samples){const [x,y]=pointWorld([.5,.5],p,item);fr[laserZone(x,y,m)]=1;samples=1;}
-    return fr.map(a=>a/samples);
+    if(!samples){const [x,y]=pointWorld([.5,.5],p,item);fr[activeMask(x,y,m)]=1;samples=1;}
+    return Array.from(fr,v=>v/samples);
+  };
+  // Allocate forced work first; then share overlap work with the least-busy eligible scanners.
+  // Work is a per-layer volume equivalent, not the actual scanner path or contour timing.
+  const distributeMasks=(work,m)=>{
+    const loads=Array(m.lasers).fill(0);
+    const ones=n=>{let x=n,c=0;while(x){c+=x&1;x>>=1;}return c;};
+    const masks=Array.from({length:(1<<m.lasers)-1},(_,i)=>i+1).filter(k=>work[k]>0)
+      .sort((a,b)=>ones(a)-ones(b)||a-b);
+    for(const mask of masks){
+      const eligible=loads.map((_,i)=>i).filter(i=>mask&(1<<i));
+      const amount=work[mask];if(eligible.length===1){loads[eligible[0]]+=amount;continue;}
+      let lo=Math.min(...eligible.map(i=>loads[i])),hi=Math.max(...eligible.map(i=>loads[i]))+amount;
+      for(let k=0;k<38;k++){
+        const mid=(lo+hi)/2;
+        if(eligible.reduce((s,i)=>s+Math.max(0,mid-loads[i]),0)>amount)hi=mid;else lo=mid;
+      }
+      let rem=amount;
+      eligible.forEach((i,n)=>{const add=n===eligible.length-1?rem:Math.min(rem,Math.max(0,lo-loads[i]));loads[i]+=add;rem-=add;});
+    }
+    return loads;
+  };
+  // Auto-Platzierung soll keine Bauteile in unbestrahlbare Bereiche schieben.
+  const hasScannerCoverage=(part,item,n=7)=>{
+    const loops=normLoops(part),m=machine();let checked=0;
+    for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+      const uv=[(x+.5)/n,(y+.5)/n];if(!insideAny(uv,loops))continue;
+      checked++;
+      const [wx,wy]=pointWorld(uv,part,item);
+      if(!activeMask(wx,wy,m))return false;
+    }
+    if(!checked){const [wx,wy]=pointWorld([.5,.5],part,item);return !!activeMask(wx,wy,m);}
+    return true;
   };
   const validateNumbers=()=>{
     const p=data.params,c=data.cost,m=machine();
     const tests=[[p.power,.1,100000,'Laserleistung'],[p.speed,.1,100000,'Scangeschwindigkeit'],[p.hatch,.001,20,'Hatchabstand'],[p.layer,1,1000,'Schichtdicke'],[p.eff,1,100,'Effizienz'],[p.recoat,0,10000,'Beschichtungszeit'],[p.fixed,0,100000,'Nebenzeit'],[p.support,0,500,'Support'],[p.maxTime,1,10000,'Zeitgrenze'],[p.margin,0,100,'Randabstand'],[p.gap,0,100,'Bauteilabstand'],[m.w,20,1000,'Plattenbreite'],[m.h,20,1000,'Plattentiefe']];
     for(const [val,min,max,label]of tests)if(!Number.isFinite(val)||val<min||val>max)throw Error(`${label}: bitte ${min}–${max} eingeben.`);
     for(const [key,val]of Object.entries(c))if(!Number.isFinite(val)||val<0||val>1e7)throw Error(`Kosteneinstellung ${key} ist ungültig.`);
+    const scanErrors=scanMessage().filter(x=>!x.includes('PDF-Angebot gesperrt'));
+    if(scanErrors.length)throw Error(scanErrors[0]);
     if(c.density<.01||c.density>100)throw Error('Dichte ist ungültig.');
     if(data.parts.some(part=>![part.qty,part.vol,part.z,part.w,part.h].every(v=>Number.isFinite(v)&&v>0)))throw Error('Ungültige Bauteildaten.');
   };
@@ -357,29 +460,32 @@
       if(!entities.length)continue;
       const layers=Math.max(...entities.map(e=>Math.ceil(e.p.z/layermm)));
       if(layers>25000)throw Error('Zu viele Schichten (max. 25.000): Höhe und Schichtdicke prüfen.');
-      const workload=Array.from({length:m.lasers},()=>new Float64Array(layers));
+      const jobs=entities.map(({item,p:part})=>{
+        const partLayers=Math.ceil(part.z/layermm),vol=part.vol*(1+p.support/100),fr=fractions(part,item);
+        if(fr[0]>.00001)throw Error(`Platte ${ix+1}: ${part.name} befindet sich teilweise außerhalb aktiver Laserfelder (${fmt(fr[0]*100)} % der projizierten Fläche). Position/Scannerfelder prüfen.`);
+        return {part,partLayers,vol,fr};
+      });
+      const distinctHeights=[...new Set([0,...jobs.map(j=>j.partLayers)])].sort((a,b)=>a-b);
       const totalLaserVolume=new Array(m.lasers).fill(0);
-      let bedVolume=0;
-      for(const {item,p:part}of entities){
-        const partVolume=part.vol*(1+p.support/100),partLayers=Math.ceil(part.z/layermm),fr=fractions(part,item);
-        bedVolume+=partVolume;
-        const aggregate=totalParts.get(part.id);aggregate.n++;aggregate.volume+=partVolume;
-        for(let laser=0;laser<m.lasers;laser++){
-          const perLayer=partVolume*fr[laser]/partLayers;
-          if(!perLayer)continue;
-          totalLaserVolume[laser]+=partVolume*fr[laser];
-          const w=workload[laser];for(let k=0;k<partLayers;k++)w[k]+=perLayer;
-        }
-      }
-      let exposureH=0;
-      for(let k=0;k<layers;k++){
-        let max=0;for(let laser=0;laser<m.lasers;laser++)max=Math.max(max,workload[laser][k]);
-        exposureH+=max/q;
+      const layerDistribution=[];
+      let bedVolume=0,exposureH=0;
+      jobs.forEach(j=>{bedVolume+=j.vol;const row=totalParts.get(j.part.id);row.n++;row.volume+=j.vol;});
+      for(let s=1;s<distinctHeights.length;s++){
+        const bottom=distinctHeights[s-1],top=distinctHeights[s],span=top-bottom;
+        const work=new Float64Array(1<<m.lasers);
+        jobs.filter(j=>j.partLayers>bottom).forEach(j=>{
+          const unit=j.vol/j.partLayers;
+          for(let mask=1;mask<work.length;mask++)work[mask]+=unit*j.fr[mask];
+        });
+        const loads=distributeMasks(work,m),peak=Math.max(...loads);
+        exposureH+=peak*span/q;
+        loads.forEach((v,i)=>totalLaserVolume[i]+=v*span);
+        layerDistribution.push({from:bottom+1,to:top,laserLoad:loads});
       }
       const coat=layers*p.recoat/3600,fix=p.fixed/60,jobH=exposureH+coat+fix;
       const laserHours=totalLaserVolume.map(v=>v/q);
       for(const {p:part}of entities){const row=totalParts.get(part.id);row.allocated+=(jobH*c.rate+c.setup)*((part.vol*(1+p.support/100))/bedVolume);}
-      beds.push({num:ix+1,layers,exposureH,coat,fix,jobH,bedVolume,laserHours,laserVolume:totalLaserVolume,efficiency:exposureH>0?totalLaserVolume.reduce((a,b)=>a+b,0)/(q*exposureH*m.lasers)*100:0});
+      beds.push({num:ix+1,layers,exposureH,coat,fix,jobH,bedVolume,laserHours,laserVolume:totalLaserVolume,layerDistribution,efficiency:exposureH>0?totalLaserVolume.reduce((a,b)=>a+b,0)/(q*exposureH*Math.max(1,m.scans.filter(s=>s.enabled).length))*100:0});
       sumHours+=jobH;scanH+=exposureH;coatH+=coat;volAll+=bedVolume;jobCount++;maxJob=Math.max(maxJob,jobH);
     }
     const totalQty=[...totalParts.values()].reduce((a,b)=>a+b.n,0);
@@ -407,7 +513,7 @@
     try{
       lastCalc=estimate();const r=lastCalc;
       $('qt-build-overview').innerHTML=metrics([
-        ['Anzahl Laser',String(machine().lasers),'je aktiver Maschine'],['Bauplatten',String(r.jobCount),'mit Bauteilen'],['Gesamtbauzeit',`${fmt(r.sumHours,2)} h`,'über alle Bauplatten'],['Aufgeschmolzen',`${fmt(r.volAll,2)} cm³`,'mit rechnerischen Supports']
+        ['Aktive Laser',`${machine().scans.filter(s=>s.enabled).length}/${machine().lasers}`,'Scannerfelder in Reihe'],['Bauplatten',String(r.jobCount),'mit Bauteilen'],['Gesamtbauzeit',`${fmt(r.sumHours,2)} h`,'über alle Bauplatten'],['Aufgeschmolzen',`${fmt(r.volAll,2)} cm³`,'mit rechnerischen Supports']
       ]);
       $('qt-build-details').innerHTML=r.beds.length?r.beds.map(b=>`<div class="subcard"><strong>Platte ${b.num}: ${fmt(b.jobH,2)} h</strong> · ${b.layers} Schichten <span class="tag">${fmt(b.efficiency,0)} % Parallel-Wirkungsgrad*</span><div class="qt-bars">${b.laserHours.map((h,i)=>lineBar(`Laser ${i+1}`,h,Math.max(...b.laserHours))).join('')}</div><p class="helper">Belichtung ${fmt(b.exposureH,2)} h · Beschichten ${fmt(b.coat,2)} h · Nebenzeiten ${fmt(b.fix,2)} h. *Volumenäquivalente Parallelauslastung, nicht Maschinen-Telemetrie.</p></div>`).join(''):'<p class="helper">Noch keine Bauteile auf einer Bauplatte platziert.</p>';
       const problems=validateLayout(),over=r.beds.filter(b=>b.jobH>data.params.maxTime);
@@ -416,7 +522,7 @@
       $('qt-cost-overview').innerHTML=metrics([['Direkte Kosten',euro(r.direct),'alle Bauplatten'],['Angebot netto',euro(r.net),'inkl. Risiko + Gewinn'],['Maschinenkosten',euro(r.machineCost),'Bauzeit × Stundensatz'],['Material',euro(r.rawMaterial),'inkl. Verlust']]);
       $('qt-cost-details').innerHTML=table(['Bauteil','Stück','Fertigung + Material + Extras','Angebot / Stück','Summe'],r.partLines.map(p=>[p.part.name,p.n,euro(p.direct),euro(p.unit),euro(p.price)]))+
         table(['Kostenanteil','Betrag'],[['Maschine',euro(r.machineCost)],['Rüsten',euro(r.setupCost)],['Pulver',euro(r.rawMaterial)],['Nacharbeit + WB + QS',euro(r.post)],['Versand',euro(data.cost.shipping)],['Direkte Kosten',euro(r.direct)],['Risikozuschlag inkl.',euro(r.withRisk)],['Gesamt netto',euro(r.net)]]);
-      $('qt-cost-warning').textContent=problems.length?'Unvollständige Belegung: noch keine versandfertige Angebotskalkulation.':'Die Verteilung gemeinsamer Kosten basiert auf Volumenanteilen innerhalb jeder Bauplatte.';
+      $('qt-cost-warning').textContent=problems.length?'Unvollständige Belegung: noch keine versandfertige Angebotskalkulation.':'Überlappende Scanfelder sind über eine vereinfachte Volumen-/Lastverteilung berücksichtigt; Gemeinkosten nach Bauteilvolumen.';
       $('qt-cost-warning').className=problems.length?'message warn':'message';
     }catch(e){lastCalc=null;for(const id of ['qt-build-overview','qt-build-details','qt-cost-overview','qt-cost-details'])$(id).innerHTML='';$('qt-build-warning').textContent=e.message;$('qt-cost-warning').textContent=e.message;}
     renderOffer();
@@ -424,6 +530,7 @@
   const offerReady=()=>{
     const errors=validateLayout();
     if(!lastCalc||!lastCalc.beds.length)errors.push('Kalkulation fehlt.');
+    if(!machine().verified)errors.push('Scannerfelder der Maschine nicht geprüft/bestätigt.');
     if(!data.customer.trim())errors.push('Kundenname fehlt.');
     if(!data.number.trim())errors.push('Angebotsnummer fehlt.');
     if(!data.offer.date)errors.push('Angebotsdatum fehlt.');
@@ -471,7 +578,7 @@
     if(step===1)drawPlate();
   };
   const drawAll=()=>{
-    redrawParts();redrawBedTabs();drawPlate();paintMetrics();showStep(step);redrawProjectList();
+    redrawParts();redrawBedTabs();drawPlate();scanStatus();paintMetrics();showStep(step);redrawProjectList();
   };
   const update=(persistIt=true)=>{drawAll();if(persistIt)persist();};
   const safeQuoteImport=payload=>{
@@ -492,7 +599,7 @@
           selected=null;activeBed=0;
           $('qt-bed-w').value=machine().w;$('qt-bed-h').value=machine().h;
           $('qt-machine-label').textContent=machineNames[data.machine];
-          $('qt-zones-note').textContent=`${machine().lasers} Laser · idealisierte ${machine().lasers===4?'2×2':'2×1'}-Zonen. Tatsächliche Scanfelder prüfen.`;
+          scanUI();
         }
         if(key==='material')applyMaterial();update();
       });
@@ -502,8 +609,36 @@
     Object.entries(offerFields).forEach(([key,id])=>$(id).addEventListener('input',()=>{data.offer[key]=$(id).value;update();}));
     ['qt-bed-w','qt-bed-h'].forEach(id=>$(id).addEventListener('change',()=>{
       const val=readNum(id);if(!Number.isFinite(val)||val<20||val>1000){note('Plattenmaß muss 20–1000 mm betragen.',true);return;}
-      machine()[id==='qt-bed-w'?'w':'h']=val;update();
+      const m=machine();m[id==='qt-bed-w'?'w':'h']=val;
+      m.scans=autoScans(m.w,m.h,m.lasers,m.overlap,m.direction);markScanUnverified();scanUI();update();
     }));
+    $('qt-create-scans').addEventListener('click',()=>{
+      const m=machine(),ov=Number($('qt-overlap').value),direction=$('qt-direction').value;
+      if(!Number.isFinite(ov)||ov<0||ov>Math.min(direction==='y'?m.h:m.w,400)||(m.lasers-1)*ov>=(direction==='y'?m.h:m.w)*m.lasers){note('Überlappung: bitte gültige Millimeterzahl eingeben.',true);return;}
+      m.overlap=ov;m.direction=direction;m.scans=autoScans(m.w,m.h,m.lasers,ov,m.direction);markScanUnverified();scanUI();update();note('Gleichmäßige Beispiel-Scanfelder erzeugt. Bitte an realen Maschinendaten ausrichten.');
+    });
+    $('qt-scan-rows').addEventListener('change',event=>{
+      const target=event.target,idx=Number(target.dataset.scanId??target.dataset.scanActive);
+      if(!Number.isInteger(idx)||!machine().scans[idx])return;
+      if(target.matches('[data-scan-active]'))machine().scans[idx].enabled=target.checked;
+      else if(target.matches('[data-scan-field]')){
+        const val=target.value.trim()?Number(target.value.replace(',','.')):NaN;
+        machine().scans[idx][target.dataset.scanField]=val;
+      }else return;
+      markScanUnverified();scanStatus();update();
+    });
+    $('qt-scans-verified').addEventListener('change',()=>{
+      if($('qt-scans-verified').checked){
+        const errors=scanMessage().filter(x=>!x.includes('PDF-Angebot gesperrt'));
+        if(errors.length){$('qt-scans-verified').checked=false;note(errors[0],true);return;}
+      }
+      machine().verified=$('qt-scans-verified').checked;update();
+    });
+    $('qt-overlap').addEventListener('input',()=>{ /* Vorlage: erst mit Button aktivieren */ });
+    $('qt-save-scans').addEventListener('click',()=>{
+      try{localStorage.setItem('becker-quote-machine-config-v3',JSON.stringify(data.machines));note('Alle Laserkonfigurationen lokal gespeichert. Bitte auch Projekt-/Gesamtbackup exportieren.');}
+      catch(e){note('Speichern fehlgeschlagen.',true);}
+    });
     $('qt-set-profile').addEventListener('click',()=>{
       try{localStorage.setItem('becker-quote-machine-config-v3',JSON.stringify(data.machines));note('Maschinenprofile auf diesem Gerät gespeichert.');}
       catch(e){note('Speichern fehlgeschlagen.',true);}
@@ -579,7 +714,8 @@
     window.addEventListener('afterprint',()=>document.body.classList.remove('qt-offer-print-mode'));
   };
   load();normalize();
-  try{const prefs=JSON.parse(localStorage.getItem('becker-quote-machine-config-v3')||'null');if(prefs&&typeof prefs==='object'&&!localStorage.getItem(K)){for(const id of Object.keys(defaults().machines))if(prefs[id]?.w>20&&prefs[id]?.h>20)data.machines[id]={...data.machines[id],w:prefs[id].w,h:prefs[id].h};}}catch(e){}
+  try{const prefs=JSON.parse(localStorage.getItem('becker-quote-machine-config-v3')||'null');if(prefs&&typeof prefs==='object'&&!localStorage.getItem(K)){for(const id of Object.keys(defaults().machines))if(prefs[id]?.w>20&&prefs[id]?.h>20&&Array.isArray(prefs[id].scans)){data.machines[id]={...data.machines[id],...prefs[id]};}}}catch(e){}
+  normalize();
   if(!data.offer.valid){const dt=new Date();dt.setDate(dt.getDate()+30);data.offer.valid=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;}
   const printContainer=document.createElement('div');printContainer.id='qt-offer-print';document.body.append(printContainer);
   putInputs();register();showStep(0);
