@@ -1,77 +1,88 @@
-BECKER TOOLS V2.1 – iPHONE-WEBAPP
+BECKER TOOLS V3.0 – iPHONE-WEBAPP
 ================================
-Additive Fertigung + WB-Messdatenauswertung + Wärmezeit-Prozessplaner + Timer
+LPBF – Bauteile, STL, frei positionierbare Bauplatte, Mehrlaser-Zeiten, Kalkulation und Kundenangebot.
+Alle bestehenden Module aus V2.1 (Laser, einfacher Referenz-Bauzeitrechner, Kosten,
+Vergleich, alte Raster-Bauplatte, Material, WB-Auswertung, Wärmezeit und Timer) bleiben bestehen.
 
-DIE WICHTIGE NEUERUNG V2.1
-- Das eigenständige Wärmebehandlungs-WebApp-Tool „Wärmezeit“ ist jetzt als
-  eigenes Modul „Wärmezeit“ direkt in Becker Tools integriert.
-- „WB“ bleibt die separate Messdatenauswertung für Lösungsglühen/Warmauslagerung.
-- Alle bisherigen Becker-Tools-V2.0-Module bleiben erhalten.
+NEUER WORKFLOW – Registerkarte „Angebote“
+1) Projekt und Kunde erfassen. Maschine wählen:
+   SLM 500 I/II/III: jeweils 4 Laser; SLM 280: 2 Laser.
+   Bauplatten-Vorgaben sind editierbare Annahmen (SLM500 500 x 280 mm,
+   SLM280 280 x 280 mm); tatsächlichen nutzbaren Bauraum vor Nutzung prüfen.
+2) Bauteile anlegen, Stückzahlen, Bauteilabmessungen, Volumen und Höhe eingeben.
+   OPTIONAL STL (binär/ASCII) importieren. STL enthält keine Einheiten!
+   XY-Maße, Z-Höhe und (bei plausibel geschlossenem Netz) CAD-Volumen
+   werden aus der Datei übernommen. Bitte Modell-Ausrichtung, Einheit mm,
+   Volumen und Bauorientierung prüfen. Das STL wird lokal verarbeitet und
+   als vereinfachte projizierte XY-Silhouette gespeichert.
+   Ohne STL wird ein Rechteck verwendet. Das ist VARIANTE C.
+3) Bauplatte öffnen, Bauteil wählen und mit + hinzufügen; alternativ alle
+   fehlenden Stückzahlen automatisch über mehrere Bauplatten verteilen.
+   Antippen, mit Finger verschieben, in 15°-Schritten oder 90° drehen.
+   X/Y können auch per Eingabe verändert werden. Rote Teile verletzen
+   Rand, Bauraum oder Bauteilabstand. SVG-Darstellung inklusive Zonen.
+4) Mehrlaser-Bauzeit im 3. Schritt anhand der realen Projektmenge ansehen.
+   Vereinfachte Volumenverteilung nach projizierter XY-Zugehörigkeit zu
+   idealisierten Laserzonen, pro Schicht zeitkritischer Laser.
+   Beschichtungs-/Nebenzeit pro Platte; Laseranzahl 4 bzw. 2.
+   Es ist keine exakte Slicer-Simulation und keine Prüfung realer Scannerfelder.
+5) Kostensätze einschließlich Pulver, Dichte, Nacharbeit, WB, QS,
+   Versand, Risiko und Gewinn einstellen. Gemeinsame Maschinen- und
+   Rüstkosten werden pro Bauplatte nach Bauteilvolumen aufgeteilt.
+6) Kundenangebot mit Preisen/Stück, netto gesamt und Angebotsdatum,
+   Gültigkeit, Lieferbedingungen anschauen. Unter „Als PDF / Drucken“
+   auf dem iPhone über die Druckvorschau als PDF sichern/teilen.
+   Der PDF-Button wird erst aktiviert, wenn Bauteile vollständig und
+   ohne Kollision platziert sind und notwendige Felder gültig sind.
+7) Projekt speichern/laden; Projekt als JSON exportieren oder importieren.
+   Unter „Profile“ kann die gesamte Anwendung inklusive Angebotsdaten und
+   Projektliste als vollständiges JSON-Backup gesichert werden.
 
-WÄRMEZEIT (PROZESSPLANER)
-- Beliebige Prozessschritte (bis 100): Aufheizen, Halten, Abkühlen,
-  Warten, Sonstiges mit Temperatur und Dauer in Stunden/Minuten.
-- Schritte hinzufügen, verschieben oder löschen.
-- Gesamtdauer sowie Start-/Endzeit automatisch berechnen.
-- Wahlweise Zielzeit oder Startzeit vorgeben.
-- Zeitplan je Prozessschritt und Live-Countdown zu Start bzw. Ende.
-- Bis zu 50 Wärmezeit-Programme speichern, laden und löschen.
-- Beispielprogramm (keine freigegebene Wärmebehandlungsvorschrift).
-- .ics-Kalendereintrag mit 10-Minuten-Erinnerung herunterladen.
-- Restliche Prozesszeit in den bestehenden Timer übernehmen.
-- Direkter Wechsel in „WB“ zur Messdatenauswertung.
-- Wärmezeit-Daten und Programme sind im Becker-Tools-JSON-Backup enthalten.
-- Bei gleicher Browser-Speicherumgebung werden ggf. vorhandene alte
-  „waermezeit.state“ und „waermezeit.programs“ beim ersten Start eingelesen.
-  Auf einem anderen Gerät, einer anderen Domain oder in einer eigenständigen
-  iOS-PWA gibt es KEINE garantierte automatische Datenübernahme.
+SICHERHEIT UND VERLÄSSLICHKEIT
+- Werte für Material, Scanparameter, Pulverkosten und Maschinensätze
+  sind RECHENBEISPIELE, keine freigegebenen Betriebsparameter.
+- STL-Silhouette = XY-Projektion eines triangulierten 3D-Modells,
+  auf eine begrenzte Rasterauflösung reduziert, nicht der tatsächliche
+  schichtweise Scanverlauf. Kollisionserkennung gilt für XY-Fußabdruck
+  mit konstantem Mindestabstand. 3D-Supportkollisionen/Recoater nicht geprüft.
+- Bei gleicher Bauteilgeometrie wird CAD-Volumen rechnerisch über alle
+  Schichten verteilt. Laserarbeitsbereiche, Strahlüberlappung und
+  thermische Beschränkungen werden nicht automatisch verifiziert.
+  Für ein echtes Angebot Ergebnisse gegen Slicer-Bauzeit und
+  Maschinen-/Materialfreigaben validieren.
+- STL importiert max. 22 MB / 320.000 Dreiecke; Autoplatzierung
+  begrenzt, ohne optimales industrielles 2D-Nesting.
+- Alle Daten werden lokal im Browser gespeichert. Bitte JSON-Backup
+  erstellen! Ein neues iPhone oder eine andere Domain überträgt keine
+  gespeicherten Daten automatisch.
+- Ein Bearbeiten des Programms in GitHub aktualisiert NICHT die Daten
+  bereits installierter Browserinstanzen, bis die Seite neu geladen wird.
 
-BESTEHENDE MODULE
-- Laser: volumetrische Energiedichte, Linien- und Flächenenergie,
-  theoretischer Volumenstrom, Leistung und Geschwindigkeit zur Zieldichte.
-- Bauzeit: Volumen, Supports, Beschichtungszeit und Nebenzeiten.
-- Kosten: Maschine, Material, Rüsten, Nachbearbeitung und Zuschlag.
-- Vergleich: 4 Parametersätze und Diagramme.
-- Bauplatte: Rasterbelegung und mögliche Stückzahl.
-- Material: Dichten, Bauteilmasse, Pulver und eigene Materialien.
-- WB: CSV-Temperaturdaten, Kanalwahl, Soll-/Ist-Plateaus, Zeitachse,
-  Lösungsglühen (3 Stufen), Warmauslagerung (1 Stufe), PDF-Druckbericht.
-- Timer: Countdown, Stoppuhr, Pausen, Zeitvorlagen.
-- Profile: lokale Speicherung, CSV und JSON-Vollbackup.
+INSTALLATION GITHUB PAGES
+1) Vollständige ZIP-Datei entpacken und alle Dateien/Unterordner ins
+   GitHub-Pages-Repository laden: index.html, extras.js, waermezeit.js,
+   quote.js, sw.js, manifest.webmanifest, icons/ sowie beispiele/ bei Bedarf.
+2) Unter Settings > Pages die Veröffentlichung aus dem passenden Branch
+   und Root-Ordner aktivieren (falls noch nicht erfolgt).
+3) Die Pages-Adresse in Safari öffnen und neu laden.
+4) Safari > Teilen > Zum Home-Bildschirm, optional.
+5) Offline-Modus benötigt eine erfolgreiche erstmalige HTTPS-Ladung und
+   den Service Worker; die standalone Datei allein sichert das nicht.
 
-INSTALLATION AUF DEM IPHONE
-1. ZIP entpacken.
-2. ALLE Dateien aus dem ZIP – index.html, extras.js, waermezeit.js,
-   sw.js, manifest.webmanifest und den gesamten Ordner icons/ sowie bei
-   Bedarf beispiele/ – im bestehenden GitHub-Pages-Repository hochladen.
-3. Nach dem Upload die GitHub-Pages-Seite in Safari neu öffnen. Eine bereits
-   installierte Home-Bildschirm-App ggf. schließen und erneut öffnen.
-4. Safari: Teilen -> Zum Home-Bildschirm -> Hinzufügen.
-5. Die App ist nach erfolgreichem ersten Laden der Ressourcen offlinefähig.
-   Die vollständige ZIP-Version ist hierfür erforderlich. Die separat
-   bereitgestellte HTML-Einzeldatei dient nur zum schnellen Ausprobieren.
+ALTERNATIVE: NUR index.html AKTUALISIEREN
+Die separate Datei „index.html“ (Einzeldatei) enthält sämtliche
+JavaScript-Module inline und ist für ein EIN-DATEI-Update im vorhandenen
+GitHub-Repository gedacht. Sie muss im Repository index.html heißen.
+Für vollständige Offline-/PWA-Updates bleibt die ZIP-Ausgabe empfohlen.
+Falls der GitHub-Upload-Dialog in iOS-Safari nicht reagiert, zunächst
+Desktopansicht bzw. Upload am PC testen; bloßes Antippen des weißen
+Drag-and-Drop-Feldes öffnet nicht zwingend den Dateidialog.
 
-UPDATE V2.0 -> V2.1
-- Möglichst vor dem Update unter „Profile“ ein JSON-Backup erstellen.
-- index.html, extras.js, manifest.webmanifest und sw.js ersetzen;
-  waermezeit.js NEU hinzufügen. Alte Daten bei gleicher Domain/Speicherung
-  bleiben normalerweise erhalten, sofern Safari sie nicht entfernt hat.
-- Das V2.1-Backup schließt Wärmezeit und alle zuvor vorhandenen V2.0-Daten ein.
-- V1.0- und V2.0-Backups lassen sich weiterhin importieren.
+TESTDATEI
+beispiele/STL_L_Beispiel.stl – L-förmiger Testkörper, Bounding Box
+40 x 40 x 20 mm und CAD-Volumen 24 cm³; kein Fertigungsmodell.
 
-SICHERHEIT / HINWEISE
-- Dauer wird aus eingegebenen Schrittzeiten berechnet – Aufheizraten oder
-  Ofenregelung werden NICHT simuliert oder gesteuert.
-- Eine heruntergeladene Kalenderdatei muss in Apple Kalender importiert
-  werden. Sie erzeugt nicht automatisch eine Benachrichtigung.
-- Laufender Countdown ist bei geöffneter App sichtbar; zuverlässiger Ton
-  im Hintergrund oder bei gesperrtem iPhone ist NICHT garantiert.
-- Wärmezeit und WB-Auswertung dienen der Planung und Analyse, NICHT der
-  sicherheitskritischen Prozesssteuerung oder automatischen Qualitätsfreigabe.
-- Alle Beispielwerte/-kurven sind frei gewählte Demo-Daten, keine
-  freigegebenen Parameter oder Wärmebehandlungsvorschriften.
-- Daten werden lokal auf dem Gerät gehalten (localStorage/IndexedDB).
-  Für wichtige Daten regelmäßig JSON-Sicherungen durchführen.
-- Beim Wechsel der Domain oder PWA-Installation kann Speicher getrennt sein.
-- Auf OneDrive hochgeladene HTML-Dateien sind kein zuverlässiger Ersatz
-  für eine statisch gehostete Website mit HTTPS.
+VORHANDENE FUNKTIONEN V2.1
+Wärmezeit: Prozesszeitenplaner, Programmvorlagen, Kalenderexport,
+Timerübernahme. WB-Auswertung: CSV-Temperaturen, Lösungsglühen,
+Warmauslagerung, Report. Plus vorhandene LPBF-/Materialwerkzeuge.

@@ -176,17 +176,67 @@
     #wz-status{min-height:18px}
     @media (max-width:410px){.wz-step-fields{grid-template-columns:1fr 1fr}.wz-line{grid-template-columns:1fr auto}.wz-clock{grid-column:1/-1}.wz-step-hours{gap:8px}}
     @media print{#panel-waermezeit .wz-step .wz-small-actions,#panel-waermezeit .wz-hide-print{display:none!important}}
+
+.qt-steps{display:flex;gap:7px;overflow-x:auto;scrollbar-width:thin;margin:0 0 16px;padding-bottom:5px}
+.qt-step{flex:0 0 auto;background:#14263a;color:#b8cadb;border:1px solid #32485d;border-radius:12px;min-height:43px;padding:8px 11px;font-size:12px;font-weight:750}
+.qt-step.active{background:#245477;border-color:#77c5ff;color:#fff}
+.qt-page[hidden]{display:none!important}
+.qt-bed-tabs{display:flex;gap:7px;overflow-x:auto;margin:10px 0 13px;padding-bottom:5px}
+.qt-bed-tabs button{border:1px solid #425e74;border-radius:9px;min-height:40px;background:#142438;color:#d9eaff;padding:7px 12px;white-space:nowrap}
+.qt-bed-tabs button.active{background:#24608a;border-color:#8dd7ff}
+#qt-plate-frame{background:#0c1623;border:1px solid #344d65;border-radius:13px;margin-top:13px;padding:7px;overflow:hidden}
+#qt-svg{display:block;width:100%;max-height:70vw;min-height:175px;touch-action:pan-y;user-select:none;overflow:visible}
+#qt-svg .qt-item{touch-action:none;cursor:grab}
+#qt-svg .qt-item:active{cursor:grabbing}
+#qt-svg .qt-item:focus-visible{outline:none;stroke:#fff;stroke-width:3}
+#qt-svg text{pointer-events:none;user-select:none}
+.qt-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:9px;font-size:11px;color:#a9bbd0}
+.qt-legend span:nth-child(1){color:#426c8c}.qt-legend span:nth-child(2){color:#60cbb1}.qt-legend span:nth-child(3){color:#ff8a8e}.qt-legend span:nth-child(4){color:#f4d78e}
+.qt-nextbar{justify-content:space-between;margin:16px 0}
+.qt-nextbar .btn{flex:1;max-width:300px}
+.qt-listrow{background:#101c2a;border:1px solid #34475f;border-radius:13px;padding:13px}
+.qt-listrow header{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:750}
+.qt-listrow small{color:#afc4d8;font-size:12px}
+.qt-kpi{font-size:24px;font-weight:850;color:#a7e0ff;letter-spacing:-.7px}
+.qt-bars{display:grid;gap:9px;margin-top:14px}
+.qt-barrow{display:grid;grid-template-columns:minmax(76px,140px) 1fr auto;gap:9px;align-items:center;font-size:12px}
+.qt-bartrack{height:13px;border-radius:7px;background:#14253a;overflow:hidden}
+.qt-bartrack b{display:block;height:100%;border-radius:7px;background:#5dbae8}
+.qt-scroll{overflow-x:auto;max-width:100%;margin-top:13px}
+.qt-table{width:100%;border-collapse:collapse;font-size:12px;min-width:400px}
+.qt-table th,.qt-table td{text-align:right;padding:10px 8px;border-bottom:1px solid #3b4d63;font-variant-numeric:tabular-nums}
+.qt-table th:first-child,.qt-table td:first-child{text-align:left}
+.qt-table td:nth-child(1){overflow-wrap:anywhere}
+.qt-offer-paper{background:#fdfefe;color:#152334;padding:18px;border-radius:11px;font-size:13px}
+.qt-offer-paper h3{font-size:23px;color:#102536;margin:0 0 4px}
+.qt-offer-paper p{margin:7px 0;color:#213140}
+.qt-offer-paper table{width:100%;border-collapse:collapse;font-size:12px}
+.qt-offer-paper th,.qt-offer-paper td{border-bottom:1px solid #d7e0e7;padding:9px 5px;text-align:right}
+.qt-offer-paper th:first-child,.qt-offer-paper td:first-child{text-align:left}
+.qt-offer-paper .qt-offer-grand{font-size:20px;font-weight:850;text-align:right;margin-top:20px}
+.qt-offer-paper .qt-offer-tag{color:#4b6e89;font-size:11px;font-weight:750;letter-spacing:1px}
+#qt-offer-print{display:none}
+@media print{
+ body.qt-offer-print-mode{background:white!important;color:#111!important}
+ body.qt-offer-print-mode .app,body.qt-offer-print-mode #wb-print-report{display:none!important}
+ body.qt-offer-print-mode #qt-offer-print{display:block!important;color:#111;padding:5mm 0;font-family:Arial,sans-serif}
+ body.qt-offer-print-mode #qt-offer-print .qt-offer-paper{background:white!important;color:#111!important;padding:0}
+ body.qt-offer-print-mode #qt-offer-print .qt-offer-paper table{font-size:10pt}
+ body.qt-offer-print-mode #qt-offer-print .qt-offer-grand{font-size:16pt}
+}
+
   </style>
 </head>
 <body>
 <main class="app">
   <header class="brand">
-    <div class="brand-text"><div class="brand-mark" aria-hidden="true">B<span style="color:#baf4ff">T</span></div><div><h1>Becker Tools</h1><span class="sub">Additive Fertigung · Wärmebehandlung · V2.1</span></div></div>
+    <div class="brand-text"><div class="brand-mark" aria-hidden="true">B<span style="color:#baf4ff">T</span></div><div><h1>Becker Tools</h1><span class="sub">Angebote · Additive Fertigung · Wärmebehandlung · V3.0</span></div></div>
     <div class="badge" id="storage-badge">● Lokal</div>
   </header>
-  <section class="hero" aria-label="Einführung"><div class="eyebrow">BECKER TOOLS · V2.1</div><h2>Rechnen. Analysieren. Messen.</h2><p>LPBF-Parameter, Bauplatten, Materialien, WB-Auswertung, Wärmezeit-Prozessplanung und Timer – offlinefähig auf deinem iPhone.</p></section>
+  <section class="hero" aria-label="Einführung"><div class="eyebrow">BECKER TOOLS · V3.0</div><h2>Vom Bauteil zum Angebot.</h2><p>Bauteile erfassen, STL importieren, auf der Bauplatte verschieben, Mehrlaserzeiten kalkulieren und Angebote erstellen. Alle bisherigen Werkzeuge bleiben erhalten.</p></section>
   <nav class="nav" role="tablist" aria-label="Rechenmodule">
-    <button id="tab-laser" type="button" role="tab" aria-controls="panel-laser" aria-selected="true" data-tab="laser"><span class="icon" aria-hidden="true">⚡</span>Laser</button>
+    <button id="tab-quote" type="button" role="tab" aria-controls="panel-quote" aria-selected="true" data-tab="quote"><span class="icon" aria-hidden="true">📄</span>Angebote</button>
+    <button id="tab-laser" type="button" role="tab" aria-controls="panel-laser" aria-selected="false" data-tab="laser"><span class="icon" aria-hidden="true">⚡</span>Laser</button>
     <button id="tab-time" type="button" role="tab" aria-controls="panel-time" aria-selected="false" data-tab="time"><span class="icon" aria-hidden="true">⏱</span>Bauzeit</button>
     <button id="tab-cost" type="button" role="tab" aria-controls="panel-cost" aria-selected="false" data-tab="cost"><span class="icon" aria-hidden="true">€</span>Kosten</button>
     <button id="tab-compare" type="button" role="tab" aria-controls="panel-compare" aria-selected="false" data-tab="compare"><span class="icon" aria-hidden="true">📊</span>Vergleich</button>
@@ -198,7 +248,105 @@
     <button id="tab-data" type="button" role="tab" aria-controls="panel-data" aria-selected="false" data-tab="data"><span class="icon" aria-hidden="true">▣</span>Profile</button>
   </nav>
 
-  <section class="panel active" id="panel-laser" role="tabpanel" aria-labelledby="tab-laser">
+  <section class="panel active" id="panel-quote" role="tabpanel" aria-labelledby="tab-quote">
+  <div class="section-head"><div><h2>Von der Geometrie zum Angebot</h2><p>Projekt → Bauteile → verschiebbare Bauplatte → Mehrlaser-Bauzeit → Kalkulation → PDF</p></div></div>
+  <div class="qt-steps" role="tablist" aria-label="Angebotsworkflow">
+    <button type="button" class="qt-step active" data-qt-step="0">1 · Bauteile</button>
+    <button type="button" class="qt-step" data-qt-step="1">2 · Bauplatte</button>
+    <button type="button" class="qt-step" data-qt-step="2">3 · Bauzeit</button>
+    <button type="button" class="qt-step" data-qt-step="3">4 · Kosten</button>
+    <button type="button" class="qt-step" data-qt-step="4">5 · Angebot</button>
+  </div>
+  <div class="qt-page" id="qt-page-0">
+    <div class="card"><h3>Projekt / Kunde</h3><div class="grid">
+      <label>Kunde / Firma<input id="qt-customer" type="text" maxlength="90" placeholder="Muster GmbH"></label>
+      <label>Angebotsnummer<input id="qt-number" type="text" maxlength="50" placeholder="AM-2026-001"></label>
+      <label>Projektbezeichnung<input id="qt-project" type="text" maxlength="90" placeholder="Bauteile LPBF"></label>
+      <label>Maschine<select id="qt-machine"><option value="500I">SLM 500 I · 4 Laser</option><option value="500II">SLM 500 II · 4 Laser</option><option value="500III">SLM 500 III · 4 Laser</option><option value="280">SLM 280 · 2 Laser</option></select></label>
+      <label>Material <span class="hint">Eine Bauplatte = ein Werkstoff</span><select id="qt-material"><option>AlSi10Mg</option><option>A20X</option><option>Ti-6Al-4V</option><option>316L</option><option>Andere</option></select></label>
+      <label>Notiz zum Auftrag<input id="qt-notes" maxlength="130" placeholder="Oberfläche, Toleranzen …"></label>
+    </div></div>
+    <div class="card"><h3>Bauteil erfassen</h3><div class="grid">
+      <label>Bauteilnummer / Name<input id="qt-part-name" maxlength="75" type="text" placeholder="z. B. Halter_001"></label>
+      <label>Benötigte Menge<input id="qt-part-qty" type="number" min="1" max="120" step="1" value="8"></label>
+      <label>Breite X (mm)<input id="qt-part-w" type="number" min="0.1" step="any" value="50"></label>
+      <label>Tiefe Y (mm)<input id="qt-part-h" type="number" min="0.1" step="any" value="40"></label>
+      <label>Höhe Z (mm)<input id="qt-part-z" type="number" min="0.1" step="any" value="55"></label>
+      <label>CAD-Volumen (cm³) <span class="hint">Nicht das Bounding-Box-Volumen</span><input id="qt-part-vol" type="number" min="0.001" step="any" value="15"></label>
+    </div>
+    <label style="margin-top:12px">Optional: STL importieren (binär / ASCII, Maße in mm angenommen)
+      <input id="qt-stl-file" type="file" accept=".stl,model/stl,application/sla,application/vnd.ms-pki.stl">
+    </label>
+    <div class="helper" id="qt-stl-info">Ohne STL wird ein verschiebbares Rechteck verwendet. Bei STL wird die projizierte XY-Silhouette erzeugt; die Werte werden automatisch übernommen und können korrigiert werden.</div>
+    <div class="actions"><button class="btn primary" type="button" id="qt-part-save">Bauteil hinzufügen</button><button class="btn secondary" type="button" id="qt-part-cancel" hidden>Bearbeitung abbrechen</button></div><div class="message error" id="qt-part-error" role="status"></div>
+    </div>
+    <div class="card"><h3>Bauteile im Angebot <span class="tag" id="qt-part-count">0</span></h3><div id="qt-parts-list" class="record-grid"></div></div>
+    <div class="card"><h3>Projektverwaltung</h3><div class="actions"><button class="btn primary" id="qt-save-project" type="button">Projekt speichern</button><button class="btn secondary" id="qt-new-project" type="button">Neues Projekt</button><button class="btn secondary" id="qt-import-project" type="button">Projekt-JSON importieren</button><input id="qt-import-project-file" type="file" accept=".json,application/json" hidden></div><label style="margin-top:12px">Gespeichertes Projekt<select id="qt-projects-select"><option value="">– Bitte auswählen –</option></select></label><div class="actions"><button class="btn secondary" id="qt-load-project" type="button">Öffnen</button><button class="btn danger" id="qt-delete-project" type="button">Löschen</button></div><p class="helper">Alle Projektdaten bleiben lokal im Browser gespeichert. Verwende für wichtige Projekte zusätzlich den JSON-Export.</p></div>
+  </div>
+  <div class="qt-page" id="qt-page-1" hidden>
+    <div class="card"><h3>Bauplatte · <span id="qt-machine-label">SLM 500 I</span></h3>
+      <div class="grid">
+        <label>Plattenbreite (mm)<input id="qt-bed-w" type="number" min="20" max="1000" step="any"></label>
+        <label>Plattentiefe (mm)<input id="qt-bed-h" type="number" min="20" max="1000" step="any"></label>
+        <label>Randabstand (mm)<input id="qt-margin" type="number" min="0" max="100" step="any" value="10"></label>
+        <label>Bauteilabstand (mm)<input id="qt-gap" type="number" min="0" max="100" step="any" value="5"></label>
+      </div><p class="helper" id="qt-zones-note"></p><div class="actions"><button id="qt-set-profile" class="btn secondary" type="button">Plattenmaße für Maschine speichern</button></div>
+    </div>
+    <div class="card"><div class="record-header"><h3 style="margin:0">Platten / Fertigungslose</h3><button class="btn secondary" type="button" id="qt-add-bed">+ Weitere Platte</button></div><div class="qt-bed-tabs" id="qt-bed-tabs"></div>
+      <div class="grid"><label>Bauteil auswählen<select id="qt-place-part"></select></label><label>Laserzonen anzeigen<select id="qt-show-zones"><option value="yes">Ja</option><option value="no">Nein</option></select></label></div>
+      <div class="actions"><button class="btn primary" id="qt-place-one" type="button">+ Bauteil platzieren</button><button class="btn secondary" id="qt-autopack" type="button">Fehlende Bauteile automatisch verteilen</button><button class="btn danger" id="qt-remove-bed" type="button">Aktuelle Platte entfernen</button></div>
+      <p class="helper">Bauteil antippen und mit dem Finger verschieben. Mit +/− drehen oder unten die X/Y-Position millimetergenau eingeben. Rot markiert: außerhalb des Bauraums oder Bauteil-/Randabstand verletzt.</p>
+      <div id="qt-plate-frame"><svg id="qt-svg" viewBox="0 0 500 280" role="img" aria-label="Interaktive Bauplatte. Bauteile lassen sich verschieben und drehen."></svg></div>
+      <div class="qt-legend"><span>■ Laserzone</span><span>■ Gültiges Bauteil</span><span>■ Kollision</span><span>■ Auswahl</span></div>
+      <div class="grid" style="margin-top:14px"><label>X-Mittelpunkt (mm)<input id="qt-sel-x" type="number" min="0" step="0.1" disabled></label><label>Y-Mittelpunkt (mm)<input id="qt-sel-y" type="number" min="0" step="0.1" disabled></label></div>
+      <div class="actions"><button class="btn secondary" id="qt-rot-l" type="button" disabled>↶ 15°</button><button class="btn secondary" id="qt-rot-r" type="button" disabled>↷ 15°</button><button class="btn secondary" id="qt-rot-90" type="button" disabled>↷ 90°</button><button class="btn danger" id="qt-remove-item" type="button" disabled>Ausgewähltes entfernen</button></div>
+      <div id="qt-layout-status" class="message" role="status"></div>
+    </div>
+  </div>
+  <div class="qt-page" id="qt-page-2" hidden>
+    <div class="card"><h3>LPBF-Prozessparameter</h3><div class="grid">
+      <label>Laserleistung (W)<input id="qt-power" type="number" value="350" min="0.1" step="any"></label>
+      <label>Scangeschwindigkeit (mm/s)<input id="qt-speed" type="number" value="1400" min="0.1" step="any"></label>
+      <label>Hatchabstand (mm)<input id="qt-hatch" type="number" value="0.15" min="0.001" step="any"></label>
+      <label>Schichtdicke (µm)<input id="qt-layer" type="number" value="30" min="1" step="any"></label>
+      <label>Belichtungseffizienz (%)<input id="qt-eff" type="number" value="65" min="1" max="100" step="any"></label>
+      <label>Beschichtung je Schicht (s)<input id="qt-recoat" type="number" value="12" min="0" step="any"></label>
+      <label>Nebenzeit je Platte (min)<input id="qt-fixed" type="number" value="60" min="0" step="any"></label>
+      <label>Support-Volumen (%)<input id="qt-support" type="number" value="15" min="0" max="500" step="any"></label>
+      <label>Bauzeitwarnung (h)<input id="qt-max-time" type="number" value="168" min="1" step="any"></label>
+    </div><div class="actions"><button class="btn secondary" id="qt-from-legacy" type="button">Laser- und Kostendaten aus bisherigen Rechnern übernehmen</button></div><p class="helper">Prozessparameter sind Demonstrationswerte, keine Maschinenfreigabe. Reale Laserüberlappungen, Konturarbeit, Schichtgeometrien, Scannerfahrten und Wartezeiten werden nicht aus einem Slicer gelesen.</p></div>
+    <div class="card"><h3>Mehrlaser-Bauzeitabschätzung</h3><div id="qt-build-overview" class="results"></div><div id="qt-build-details"></div><div class="message warn">Modell: Bauteilvolumen und geschätzte XY-Laserzonenanteile werden näherungsweise schichtweise auf 4 bzw. 2 Laser verteilt. Die langsamste Laserzone begrenzt die Belichtung je Schicht. Das ist <strong>keine Slicer-Zeitsimulation</strong>.</div><div id="qt-build-warning" class="message error" role="status"></div></div>
+  </div>
+  <div class="qt-page" id="qt-page-3" hidden>
+    <div class="card"><h3>Kostensätze und Zuschläge</h3><div class="grid">
+      <label>Maschinenstundensatz (€/h)<input id="qt-rate" type="number" value="85" min="0" step="any"></label>
+      <label>Pulverpreis (€/kg)<input id="qt-powder" type="number" value="90" min="0" step="any"></label>
+      <label>Dichte (g/cm³)<input id="qt-density" type="number" value="2.67" min="0.01" step="any"></label>
+      <label>Pulververlust (%)<input id="qt-loss" type="number" value="5" min="0" step="any"></label>
+      <label>Rüsten / Platte (€)<input id="qt-setup" type="number" value="70" min="0" step="any"></label>
+      <label>Nachbearbeitung / Stück (€)<input id="qt-post" type="number" value="12" min="0" step="any"></label>
+      <label>Wärmebehandlung / Stück (€)<input id="qt-wb" type="number" value="0" min="0" step="any"></label>
+      <label>QS / Stück (€)<input id="qt-qa" type="number" value="0" min="0" step="any"></label>
+      <label>Versand einmalig (€)<input id="qt-shipping" type="number" value="0" min="0" step="any"></label>
+      <label>Risikozuschlag (%)<input id="qt-risk" type="number" value="5" min="0" step="any"></label>
+      <label>Gewinnaufschlag (%)<input id="qt-profit" type="number" value="20" min="0" step="any"></label>
+    </div><p class="helper">Gemeinsame Maschinen- und Rüstkosten werden nach geschätzter Belichtungsarbeit auf die Bauteile verteilt. Weitere standortspezifische Kosten kannst du über Sätze und Zuschläge abbilden.</p></div>
+    <div class="card"><h3>Kalkulation</h3><div id="qt-cost-overview" class="results"></div><div id="qt-cost-details"></div><div id="qt-cost-warning" class="message error"></div></div>
+  </div>
+  <div class="qt-page" id="qt-page-4" hidden>
+    <div class="card"><h3>Angebotsangaben</h3><div class="grid">
+      <label>Ausstellungsdatum<input type="date" id="qt-offer-date"></label>
+      <label>Gültig bis<input type="date" id="qt-valid-date"></label>
+      <label>Lieferzeit (Text)<input type="text" id="qt-lead" value="Nach Absprache" maxlength="100"></label>
+      <label>Lieferbedingungen<input type="text" id="qt-terms" value="Ab Werk, netto zzgl. MwSt." maxlength="130"></label>
+    </div></div>
+    <div class="card"><div class="record-header"><h3 style="margin:0">Angebotsvorschau</h3><div class="actions" style="margin:0"><button class="btn primary" id="qt-print" type="button">Als PDF / Drucken</button><button class="btn secondary" id="qt-export-json" type="button">Projekt als JSON</button><button class="btn secondary" id="qt-export-csv" type="button">Kalkulation als CSV</button></div></div><div id="qt-offer-preview"></div><div id="qt-offer-warning" class="message error" role="status"></div><p class="helper">PDF: iPhone „Drucken“ wählen und in der Druckvorschau per Aufziehen als PDF sichern bzw. teilen. Vor Versand Beträge und Fertigungsannahmen prüfen.</p></div>
+  </div>
+  <div class="actions qt-nextbar"><button class="btn secondary" id="qt-prev" type="button" disabled>← Zurück</button><button class="btn primary" id="qt-next" type="button">Weiter: Bauplatte →</button></div>
+  <div id="qt-global-status" class="statusline" role="status"></div>
+</section>
+
+  <section class="panel" id="panel-laser" role="tabpanel" aria-labelledby="tab-laser">
     <div class="section-head"><div><h2>Laserparameter</h2><p>Volumetrische Energiedichte und Schmelzrate</p></div></div>
     <div class="card"><h3>Belichtungsparameter</h3><div class="grid">
       <label>Laserleistung P <span class="hint">Watt (W)</span><input data-field="power" type="number" inputmode="decimal" min="0.01" step="any" value="350"></label>
@@ -219,9 +367,9 @@
   </section>
 
   <section class="panel" id="panel-time" role="tabpanel" aria-labelledby="tab-time">
-    <div class="section-head"><div><h2>Bauzeitrechner</h2><p>Grobe LPBF-Baujobkalkulation aus Volumen und Schichten</p></div></div>
+    <div class="section-head"><div><h2>Bauzeitrechner</h2><p>Einlaser-Referenzrechnung · Mehrlaserberechnung unter Angebote</p></div></div>
     <div class="card"><h3>Baujob</h3><div class="grid">
-      <label>Anlage<span class="hint">Informativ</span><select data-field="machine"><option value="SLM500">SLM 500</option><option value="SLM280">SLM 280</option><option value="Andere">Andere Anlage</option></select></label>
+      <label>Anlage<span class="hint">Nur informativ: hier Einlaser-Referenz</span><select data-field="machine"><option value="SLM500">SLM 500</option><option value="SLM280">SLM 280</option><option value="Andere">Andere Anlage</option></select></label>
       <label>Bauhöhe<span class="hint">mm</span><input data-field="height" type="number" min="0.01" step="any" inputmode="decimal" value="80"></label>
       <label>Bauteile pro Baujob<span class="hint">Stück</span><input data-field="pieces" type="number" min="1" step="1" inputmode="numeric" value="12"></label>
       <label>CAD-Volumen je Bauteil<span class="hint">cm³ · ohne Supports</span><input data-field="volume" type="number" min="0.01" step="any" inputmode="decimal" value="18"></label>
@@ -349,10 +497,10 @@
     <div class="section-head"><div><h2>Profile &amp; Export</h2><p>Eigene Einstellungen sichern und Ergebnisse mitnehmen</p></div></div>
     <div class="card"><h3>Parameterprofil speichern</h3><label>Profilname <span class="hint">Beispiel: SLM500 · AlSi10Mg · 30 µm</span><input id="profile-name" type="text" maxlength="65" placeholder="Mein Parameterprofil"></label><div class="actions"><button class="btn primary" id="profile-save" type="button">Profil speichern</button><button class="btn secondary" type="button" id="reset-all">Beispielwerte laden</button></div><div class="saved-list" id="saved-list" aria-live="polite"></div></div>
     <div class="card"><h3>Export und Sicherung</h3><div class="actions"><button id="export-csv" type="button" class="btn primary">Ergebnisse als CSV</button><button id="export-json" type="button" class="btn secondary">Backup als JSON</button><button id="import-json" type="button" class="btn secondary">Backup importieren</button><button id="print" type="button" class="btn secondary">Drucken / PDF</button></div><input id="file-input" type="file" accept=".json,application/json" hidden><p class="storage-note">Deine Werte und Profile werden lokal im Browser gespeichert, sofern Safari dies erlaubt. Sie werden nicht auf einen Server übertragen. Für einen Gerätewechsel kannst du ein JSON-Backup exportieren.</p><div id="data-status" class="statusline" role="status"></div></div>
-    <div class="card"><h3>Backup</h3><p class="storage-note">Das JSON-Backup umfasst auch Materialdatenbank, Vergleiche, WB-Projekte, Temperaturmessungen und Wärmezeit-Pläne und -Programme. Große Messdateien können entsprechend große Backup-Dateien ergeben. Ältere V1.0-Backups können weiter importiert werden.</p></div>
-    <div class="card"><h3>Hinweise zur Berechnung</h3><p class="storage-note">Die Energiedichte ist nur eine Kenngröße; Spotgröße, Strahlprofil, Scanstrategie, Konturen und Material beeinflussen das Ergebnis. Der Bauzeitrechner verwendet den theoretischen Hatch-Volumenstrom mit einem frei wählbaren Wirkungsgrad. Für belastbare Angebote den Baujob im Slicer simulieren und die Zeiten kalibrieren.</p></div>
+    <div class="card"><h3>Backup</h3><p class="storage-note">Das JSON-Backup umfasst zusätzlich den Angebotsworkflow samt Bauteilen, Bauplatten, STL-Konturen und gespeicherten Projekten, außerdem Materialdatenbank, Vergleiche, WB-Projekte, Temperaturmessungen und Wärmezeit-Pläne und -Programme. Große Messdateien können entsprechend große Backup-Dateien ergeben. Ältere V1.0-Backups können weiter importiert werden.</p></div>
+    <div class="card"><h3>Hinweise zur Berechnung</h3><p class="storage-note">Die Energiedichte ist nur eine Kenngröße; Spotgröße, Strahlprofil, Scanstrategie, Konturen und Material beeinflussen das Ergebnis. Der einfache Bauzeitrechner arbeitet weiterhin als Einlaser-Referenzmodell. Für Mehrlaser-Abschätzungen das Modul Angebote nutzen. Dort werden idealisierte Zonen schichtweise berücksichtigt. Für belastbare Angebote den Baujob im Slicer simulieren und die Zeiten kalibrieren.</p></div>
   </section>
-  <footer>Becker Tools · V2.1 · Offlinefähige WebApp<br>Berechnungen lokal auf deinem Gerät · Keine Prozessfreigabe</footer>
+  <footer>Becker Tools · V3.0 · Offlinefähige WebApp<br>Berechnungen lokal auf deinem Gerät · Keine Prozessfreigabe</footer>
 </main>
 <div id="wb-print-report"></div>
 <script>
@@ -490,7 +638,7 @@
   const stamp=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
   const exportCSV=()=>{
     compute();
-    const items=[['Becker Tools','LPBF / SLM Rechner V2.1'],['Datum',new Date().toLocaleString('de-DE')],[],['Eingaben','Wert','Einheit']];
+    const items=[['Becker Tools','LPBF / SLM Rechner V3.0'],['Datum',new Date().toLocaleString('de-DE')],[],['Eingaben','Wert','Einheit']];
     const labels={power:['Laserleistung','W'],speed:['Scangeschwindigkeit','mm/s'],hatch:['Hatchabstand','mm'],layer:['Schichtdicke','µm'],target:['Ziel-Energiedichte','J/mm³'],machine:['Anlage',''],height:['Bauhöhe','mm'],pieces:['Bauteile','Stück'],volume:['Volumen je Bauteil','cm³'],support:['Supportanteil','%'],efficiency:['Scananteil','%'],recoat:['Beschichtung je Schicht','s'],fixed:['Zusatzzeit je Job','min'],limit:['Bauzeitgrenze','h'],material:['Material',''],density:['Dichte','g/cm³'],powderPrice:['Pulverpreis','€/kg'],powderLoss:['Pulververlust','%'],machineRate:['Maschinenstundensatz','€/h'],setupCost:['Rüstkosten','€'],postCost:['Nachbearbeitung je Stück','€'],markup:['Kalkulationszuschlag','%']};
     for(const k in labels){items.push([labels[k][0],inputs[k].value,labels[k][1]]);}
     items.push([],['Ergebnisse','Wert','Einheit']);
@@ -523,17 +671,17 @@
     });
     el('reset-all').addEventListener('click',()=>{if(confirm('Alle Eingaben auf die Rechenbeispiele zurücksetzen?')){useValues(DEFAULTS);el('data-status').textContent='Beispielwerte geladen.';}});
     el('export-csv').addEventListener('click',exportCSV);
-    el('export-json').addEventListener('click',async()=>{const extras=window.beckerExtras?await window.beckerExtras.exportState():null;const data={format:'BeckerTools-AM',version:2,exported:new Date().toISOString(),current:allValues(),profiles,extras};download(JSON.stringify(data),`Becker_Tools_Backup_${stamp()}.json`,'application/json');el('data-status').textContent='Vollständige Backup-Datei erstellt.';});
+    el('export-json').addEventListener('click',async()=>{const extras=window.beckerExtras?await window.beckerExtras.exportState():null;const data={format:'BeckerTools-AM',version:3,exported:new Date().toISOString(),current:allValues(),profiles,extras,quote:window.beckerQuote?window.beckerQuote.exportState():null};download(JSON.stringify(data),`Becker_Tools_Backup_${stamp()}.json`,'application/json');el('data-status').textContent='Vollständige Backup-Datei erstellt.';});
     el('import-json').addEventListener('click',()=>el('file-input').click());
     el('file-input').addEventListener('change',async event=>{
       const file=event.target.files?.[0];if(!file)return;
       try{
         if(file.size>70000000)throw Error('Datei ist zu groß (max. 70 MB).');
-        const data=JSON.parse(await file.text());if(data.format!=='BeckerTools-AM'||![1,2].includes(data.version)||!data.current||typeof data.current!=='object'||Array.isArray(data.current))throw Error('Nicht unterstütztes Becker-Tools-Backup.');
+        const data=JSON.parse(await file.text());if(data.format!=='BeckerTools-AM'||![1,2,3].includes(data.version)||!data.current||typeof data.current!=='object'||Array.isArray(data.current))throw Error('Nicht unterstütztes Becker-Tools-Backup.');
         if(!confirm('Aktuelle Werte und gespeicherte Profile durch das Backup ersetzen?'))return;
         const ps=Array.isArray(data.profiles)?data.profiles:[];
         profiles=ps.filter(p=>p&&typeof p.name==='string'&&p.name.length<=65&&p.values&&typeof p.values==='object'&&!Array.isArray(p.values)).slice(0,20);
-        useValues(data.current);persistProfiles();drawProfiles();if(data.version===2&&data.extras&&window.beckerExtras)await window.beckerExtras.importState(data.extras);el('data-status').textContent='Backup erfolgreich eingelesen.';
+        useValues(data.current);persistProfiles();drawProfiles();if(data.version>=2&&data.extras&&window.beckerExtras)await window.beckerExtras.importState(data.extras);if(data.version>=3&&data.quote&&window.beckerQuote)window.beckerQuote.importState(data.quote);el('data-status').textContent='Backup erfolgreich eingelesen.';
       }catch(err){el('data-status').textContent=`Import fehlgeschlagen: ${err.message}`;}
       finally{event.target.value='';}
     });
@@ -548,5 +696,6 @@
 </script>
 <script src="extras.js"></script>
 <script src="waermezeit.js"></script>
+<script src="quote.js"></script>
 </body>
 </html>
