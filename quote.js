@@ -1,4 +1,4 @@
-/* Becker Tools V3.1 – lokaler Angebotsworkflow, kein Slicer */
+/* Becker Tools V3.2 – lokaler Angebotsworkflow, kein Slicer */
 (()=>{'use strict';
   const $=id=>document.getElementById(id);
   if(!$('panel-quote'))return;
@@ -99,6 +99,7 @@
     $('qt-zones-note').textContent=`${m.scans.filter(s=>s.enabled).length} von ${m.lasers} Lasern aktiv · Scannerfelder auf der Bauplatte werden maßstäblich gezeichnet; Überlappungen heller dargestellt.`;
     $('qt-scan-warning').textContent=scanMessage().join(' ')||'✓ Aktive Scannerfelder geprüft. In Überlappungen kann die Belichtungsarbeit auf mehrere Laser aufgeteilt werden.';
     $('qt-scan-warning').className=scanMessage().length?'message warn':'message';
+    showScanEditor();
   };
   const markScanUnverified=()=>{machine().verified=false;$('qt-scans-verified').checked=false;};
   const scanStatus=()=>{
@@ -106,6 +107,7 @@
     $('qt-zones-note').textContent=`${m.scans.filter(s=>s.enabled).length} von ${m.lasers} Lasern aktiv · ${m.direction==='y'?'Y':'X'} in Reihe, Überlappungen in hellen Flächen.`;
     $('qt-scan-warning').textContent=scanMessage().join(' ')||'✓ Aktive Scannerfelder geprüft.';
     $('qt-scan-warning').className=scanMessage().length?'message warn':'message';
+    showScanEditor();
   };
   const applyMaterial=()=>{if(matDens[data.material]){data.cost.density=matDens[data.material];$('qt-density').value=data.cost.density;}};
   const redrawParts=()=>{
@@ -445,7 +447,7 @@
     if(c.density<.01||c.density>100)throw Error('Dichte ist ungültig.');
     if(data.parts.some(part=>![part.qty,part.vol,part.z,part.w,part.h].every(v=>Number.isFinite(v)&&v>0)))throw Error('Ungültige Bauteildaten.');
   };
-  const estimate=()=>{
+  const estimate=(bedsToEstimate=data.beds)=>{
     validateNumbers();
     const p=data.params,c=data.cost,m=machine();
     const layermm=p.layer/1000;
@@ -454,7 +456,7 @@
     const totalParts=new Map(data.parts.map(part=>[part.id,{part,n:0,volume:0,allocated:0,material:0,post:0}]));
     let sumHours=0,scanH=0,coatH=0,volAll=0,jobCount=0,maxJob=0;
     const beds=[];
-    for(const [ix,bed]of data.beds.entries()){
+    for(const [ix,bed]of bedsToEstimate.entries()){
       if(!bed.items.length)continue;
       const entities=bed.items.map(item=>({item,p:findPart(item.partId)})).filter(o=>o.p);
       if(!entities.length)continue;
@@ -482,10 +484,10 @@
         loads.forEach((v,i)=>totalLaserVolume[i]+=v*span);
         layerDistribution.push({from:bottom+1,to:top,laserLoad:loads});
       }
-      const coat=layers*p.recoat/3600,fix=p.fixed/60,jobH=exposureH+coat+fix;
+      const coat=layers*p.recoat/3600,fix=p.fixed/60,rawJobH=exposureH+coat+fix,calFactorUsed=calibrationRatio(),jobH=rawJobH*calFactorUsed;
       const laserHours=totalLaserVolume.map(v=>v/q);
       for(const {p:part}of entities){const row=totalParts.get(part.id);row.allocated+=(jobH*c.rate+c.setup)*((part.vol*(1+p.support/100))/bedVolume);}
-      beds.push({num:ix+1,layers,exposureH,coat,fix,jobH,bedVolume,laserHours,laserVolume:totalLaserVolume,layerDistribution,efficiency:exposureH>0?totalLaserVolume.reduce((a,b)=>a+b,0)/(q*exposureH*Math.max(1,m.scans.filter(s=>s.enabled).length))*100:0});
+      beds.push({num:ix+1,layers,exposureH,coat,fix,jobH,rawJobH,calFactorUsed,bedVolume,laserHours,laserVolume:totalLaserVolume,layerDistribution,efficiency:exposureH>0?totalLaserVolume.reduce((a,b)=>a+b,0)/(q*exposureH*Math.max(1,m.scans.filter(s=>s.enabled).length))*100:0});
       sumHours+=jobH;scanH+=exposureH;coatH+=coat;volAll+=bedVolume;jobCount++;maxJob=Math.max(maxJob,jobH);
     }
     const totalQty=[...totalParts.values()].reduce((a,b)=>a+b.n,0);
@@ -504,7 +506,7 @@
     });
     const partsPrice=partLines.reduce((a,b)=>a+b.price,0);
     // Eventuelle Rundungsabweichungen sind nur in der Darstellung zulässig.
-    return {beds,totalQty,volAll,powderKg,machineCost,setupCost,rawMaterial,post,direct,withRisk,net,partsPrice,partLines,sumHours,scanH,coatH,maxJob,jobCount,q};
+    return {beds,totalQty,volAll,powderKg,machineCost,setupCost,rawMaterial,post,direct,withRisk,net,partsPrice,partLines,sumHours,scanH,coatH,maxJob,jobCount,q,calFactorUsed:calibrationRatio()};
   };
   const lineBar=(label,h,max)=>`<div class="qt-barrow"><span>${esc(label)}</span><div class="qt-bartrack"><b style="width:${max>0?Math.max(0,Math.min(100,h/max*100)):0}%"></b></div><strong>${fmt(h,2)} h</strong></div>`;
   const metrics=(arr)=>arr.map(([label,val,unit])=>`<div class="stat"><div class="name">${esc(label)}</div><div class="qt-kpi">${esc(val)}</div><span class="unit">${esc(unit)}</span></div>`).join('');
@@ -513,9 +515,9 @@
     try{
       lastCalc=estimate();const r=lastCalc;
       $('qt-build-overview').innerHTML=metrics([
-        ['Aktive Laser',`${machine().scans.filter(s=>s.enabled).length}/${machine().lasers}`,'Scannerfelder in Reihe'],['Bauplatten',String(r.jobCount),'mit Bauteilen'],['Gesamtbauzeit',`${fmt(r.sumHours,2)} h`,'über alle Bauplatten'],['Aufgeschmolzen',`${fmt(r.volAll,2)} cm³`,'mit rechnerischen Supports']
+        ['Aktive Laser',`${machine().scans.filter(s=>s.enabled).length}/${machine().lasers}`,'Scannerfelder in Reihe'],['Bauplatten',String(r.jobCount),'mit Bauteilen'],['Gesamtbauzeit',`${fmt(r.sumHours,2)} h`,'über alle Bauplatten'],['Aufgeschmolzen',`${fmt(r.volAll,2)} cm³`,'mit rechnerischen Supports'],['Kalibrierung',`${fmt(r.calFactorUsed,3)} ×`,`${matchingRefs().length} passende Referenzen`]
       ]);
-      $('qt-build-details').innerHTML=r.beds.length?r.beds.map(b=>`<div class="subcard"><strong>Platte ${b.num}: ${fmt(b.jobH,2)} h</strong> · ${b.layers} Schichten <span class="tag">${fmt(b.efficiency,0)} % Parallel-Wirkungsgrad*</span><div class="qt-bars">${b.laserHours.map((h,i)=>lineBar(`Laser ${i+1}`,h,Math.max(...b.laserHours))).join('')}</div><p class="helper">Belichtung ${fmt(b.exposureH,2)} h · Beschichten ${fmt(b.coat,2)} h · Nebenzeiten ${fmt(b.fix,2)} h. *Volumenäquivalente Parallelauslastung, nicht Maschinen-Telemetrie.</p></div>`).join(''):'<p class="helper">Noch keine Bauteile auf einer Bauplatte platziert.</p>';
+      $('qt-build-details').innerHTML=r.beds.length?r.beds.map(b=>`<div class="subcard"><strong>Platte ${b.num}: ${fmt(b.jobH,2)} h</strong> (roh ${fmt(b.rawJobH,2)} h) · ${b.layers} Schichten <span class="tag">${fmt(b.efficiency,0)} % Parallel-Wirkungsgrad*</span><div class="qt-bars">${b.laserHours.map((h,i)=>lineBar(`Laser ${i+1}`,h,Math.max(...b.laserHours))).join('')}</div><p class="helper">Unkalibrierte Einzelzeiten: Belichtung ${fmt(b.exposureH,2)} h · Beschichten ${fmt(b.coat,2)} h · Nebenzeiten ${fmt(b.fix,2)} h. *Volumenäquivalente Parallelauslastung, nicht Maschinen-Telemetrie.</p></div>`).join(''):'<p class="helper">Noch keine Bauteile auf einer Bauplatte platziert.</p>';
       const problems=validateLayout(),over=r.beds.filter(b=>b.jobH>data.params.maxTime);
       $('qt-build-warning').textContent=[...problems,...over.map(b=>`Platte ${b.num}: Bauzeit ${fmt(b.jobH,1)} h über ${data.params.maxTime} h.`)].slice(0,5).join(' ')||'✓ Stückzahlen und Belegung vollständig.';
       $('qt-build-warning').className=problems.length||over.length?'message warn':'message';
@@ -578,20 +580,275 @@
     if(step===1)drawPlate();
   };
   const drawAll=()=>{
-    redrawParts();redrawBedTabs();drawPlate();scanStatus();paintMetrics();showStep(step);redrawProjectList();
+    redrawParts();redrawBedTabs();drawPlate();scanStatus();paintMetrics();showStep(step);redrawProjectList();renderCal();
   };
-  const update=(persistIt=true)=>{drawAll();if(persistIt)persist();};
+  const update=(persistIt=true)=>{
+    if(optPreview){optPreview=null;$('qt-opt-apply').disabled=true;$('qt-opt-status').textContent='Eingaben verändert. Bitte Optimierung erneut starten.';$('qt-opt-results').innerHTML='';}
+    drawAll();if(persistIt)persist();
+  };
   const safeQuoteImport=payload=>{
     if(!payload||typeof payload!=='object'||!Array.isArray(payload.parts)||!Array.isArray(payload.beds))throw Error('Keine gültigen Angebotsdaten.');
     const raw=JSON.stringify(payload);if(raw.length>3000000)throw Error('Projektdatei ist zu groß.');
     data=JSON.parse(raw);normalize();activeBed=0;selected=null;editing=null;stlTemp=null;putInputs();persist();
   };
-  const API={exportState:()=>({data:snapshot(),projects}),importState:p=>{
+  const API={exportState:()=>({data:snapshot(),projects,calibration:{records:calRecords,enabled:calEnabled}}),importState:p=>{
     if(!p||typeof p!=='object')throw Error('Angebotsbackup unvollständig.');
-    safeQuoteImport(p.data);if(Array.isArray(p.projects)){projects=p.projects.filter(o=>o&&o.snapshot&&o.id).slice(0,30);storeProjects();}redrawProjectList();
+    safeQuoteImport(p.data);if(p.calibration&&Array.isArray(p.calibration.records)){calRecords=p.calibration.records.filter(isValidCalRecord).slice(0,300);calEnabled=!!p.calibration.enabled;saveCalibration();}if(Array.isArray(p.projects)){projects=p.projects.filter(o=>o&&o.snapshot&&o.id).slice(0,30);storeProjects();}redrawProjectList();
   }};
   window.beckerQuote=API;
+  // --- Becker Tools V3.2: grafischer Scannereditor, Optimierung, Bauzeitkalibrierung ---
+  let scanSelected=0,scanDrag=null,optPreview=null,optUndo=null,optBusy=false;
+  const CALKEY='becker-tools-calibration-v32';
+  let calRecords=[],calEnabled=false,calBedLast='';
+  try{const saved=JSON.parse(localStorage.getItem(CALKEY)||'null');if(saved&&Array.isArray(saved.records))calRecords=saved.records.filter(isValidCalRecord).slice(0,300);calEnabled=!!saved?.enabled;}catch(e){}
+  function isValidCalRecord(r){return !!(r&&typeof r.machine==='string'&&typeof r.material==='string'&&Number.isFinite(r.layer)&&r.layer>0&&Number.isInteger(r.lasers)&&r.lasers>=1&&r.lasers<=4&&Number.isFinite(r.predicted)&&r.predicted>.01&&r.predicted<1e5&&Number.isFinite(r.actual)&&r.actual>.01&&r.actual<1e5);}
+  const saveCalibration=()=>{try{localStorage.setItem(CALKEY,JSON.stringify({records:calRecords,enabled:calEnabled}));}catch(e){note('Referenzspeicher voll: Referenzen als JSON exportieren.',true);}};
+  const matchingRefs=()=>calRecords.filter(r=>r.machine===data.machine&&r.material===data.material&&Math.abs(r.layer-data.params.layer)<.01&&r.lasers===machine().scans.filter(s=>s.enabled).length);
+  const median=a=>{const q=[...a].sort((x,y)=>x-y),n=q.length;return n?(n%2?q[(n-1)/2]:(q[n/2-1]+q[n/2])/2):1;};
+  const calFactor=()=>{
+    const refs=matchingRefs();if(!refs.length)return 1;
+    return Math.max(.5,Math.min(2,median(refs.map(r=>r.actual/r.predicted))));
+  };
+  const calibrationRatio=()=>calEnabled?calFactor():1;
+  function renderCal(){
+    const refs=matchingRefs(),factor=calFactor(),ratio=calibrationRatio();
+    $('qt-cal-active').checked=calEnabled;
+    $('qt-cal-stats').textContent=refs.length?
+      `${refs.length} passende Referenz(en) · Median Korrekturfaktor ${fmt(factor,3)} · ${calEnabled?'angewendet':'nicht angewendet'} · ${refs.length<3?'Unter 3 Referenzen: hohe Unsicherheit.':'Keine statistische Prozessfreigabe.'}${Math.abs(factor-median(refs.map(r=>r.actual/r.predicted)))>.001?' Faktor aus Sicherheitsgründen auf 0,50–2,00 begrenzt.':''}`:
+      `Keine Referenz für ${machineNames[data.machine]} · ${data.material} · ${fmt(data.params.layer,2)} µm · ${machine().scans.filter(s=>s.enabled).length} aktive Laser. ${calEnabled?'Faktor bleibt 1,00.':'Kalibrierung ist deaktiviert.'}`;
+    $('qt-cal-stats').className='message'+(refs.length<3?' warn':'');
+    const sel=$('qt-cal-bed'),old=sel.value;
+    sel.replaceChildren();const p=document.createElement('option');p.value='';p.textContent='– Referenz manuell / ältere Jobdaten –';sel.append(p);
+    if(lastCalc)for(const b of lastCalc.beds){const o=document.createElement('option');o.value=String(b.num);o.textContent=`Platte ${b.num}: ${fmt(b.rawJobH,2)} h (unkalibriert)`;sel.append(o);}
+    if([...sel.options].some(o=>o.value===old))sel.value=old;else sel.value='';
+    const key=sel.value;if(key&&calBedLast!==key){const b=lastCalc?.beds.find(x=>String(x.num)===key);if(b)$('qt-cal-est').value=b.rawJobH.toFixed(3);}
+    calBedLast=key;
+    $('qt-cal-list').innerHTML=calRecords.length?`<div class="subcard"><strong>Gespeicherte Referenzen (${calRecords.length})</strong>${table(['Datum','Maschine / Material','Soll / Ist','Faktor','Aktion'],calRecords.slice(0,30).map(r=>[r.date||'—',`${machineNames[r.machine]||r.machine} · ${r.material} · ${fmt(r.layer)} µm · ${r.lasers} L`,`${fmt(r.predicted,2)} / ${fmt(r.actual,2)} h`,fmt(r.actual/r.predicted,3),'']))}<p class="helper">Zum Löschen einer Referenz den Eintrag unten wählen. Maximal 300 Referenzen.</p><div class="actions"><select aria-label="Referenz zum Löschen auswählen" id="qt-cal-delete-select">${calRecords.map((r,i)=>`<option value="${i}">${esc((r.note||r.date||'Referenz').slice(0,55))} · ${esc(r.machine)} · ${fmt(r.actual,2)} h</option>`).join('')}</select><button class="btn danger" id="qt-cal-delete" type="button">Gewählte Referenz löschen</button></div></div>`:'<p class="helper">Noch keine Referenzbaujobs gespeichert.</p>';
+    if(calRecords.length)$('qt-cal-delete').addEventListener('click',()=>{const i=Number($('qt-cal-delete-select').value);if(!Number.isInteger(i)||!calRecords[i]||!confirm('Diese Referenz wirklich löschen?'))return;calRecords.splice(i,1);saveCalibration();update(true);note('Referenz entfernt.');});
+  }
+  function showScanEditor(){
+    const svg=$('qt-scan-editor'),m=machine(),colors=['#4eacd5','#63c5aa','#ab98e3','#e2a967'];
+    scanSelected=Math.max(0,Math.min(m.lasers-1,scanSelected));
+    svg.setAttribute('viewBox',`-8 -8 ${m.w+16} ${m.h+16}`);
+    svg.replaceChildren();svgElement('rect',{x:0,y:0,width:m.w,height:m.h,rx:2,fill:'#101f33',stroke:'#a9c4d7','stroke-width':1.6},svg);
+    const unit=Math.min(9,Math.max(5,Math.min(m.w,m.h)/40));
+    m.scans.forEach((scan,i)=>{
+      if(![scan.x0,scan.x1,scan.y0,scan.y1].every(Number.isFinite)||scan.x1<=scan.x0||scan.y1<=scan.y0)return;
+      const chosen=i===scanSelected;
+      svgElement('rect',{x:scan.x0,y:scan.y0,width:scan.x1-scan.x0,height:scan.y1-scan.y0,
+        rx:2,fill:colors[i], 'fill-opacity':scan.enabled?.22:.035,stroke:chosen?'#ffffff':colors[i],
+        'stroke-width':chosen?2.9:1.3,'stroke-dasharray':scan.enabled?'none':'4 3',
+        'data-scan-viz-id':i,'data-scan-viz-mode':'move',class:'qt-scan-area',tabindex:0,'aria-label':`Laser ${i+1} verschieben`},svg);
+      const label=svgElement('text',{x:scan.x0+6,y:scan.y0+Math.max(13,unit*2),fill:'#fff','font-size':Math.max(11,unit*1.8),
+        'font-weight':750,'pointer-events':'none'},svg);label.textContent=`L${i+1}${scan.enabled?'':' (aus)'}`;
+    });
+    m.scans.forEach((s,i)=>m.scans.slice(i+1).forEach(t=>{
+      if(!s.enabled||!t.enabled)return;
+      const x=Math.max(s.x0,t.x0),y=Math.max(s.y0,t.y0),w=Math.min(s.x1,t.x1)-x,h=Math.min(s.y1,t.y1)-y;
+      if(w>0&&h>0)svgElement('rect',{x,y,width:w,height:h,fill:'#b5f5e9','fill-opacity':.15,'pointer-events':'none'},svg);
+    }));
+    const ss=m.scans[scanSelected];
+    if(ss&&ss.x1>ss.x0&&ss.y1>ss.y0){const rad=Math.max(6,Math.min(10,m.w/65));
+      svgElement('rect',{x:ss.x1-rad,y:ss.y1-rad,width:rad*2,height:rad*2,rx:2,
+        fill:'#f7fafc',stroke:'#17354f','stroke-width':1.6,'data-scan-viz-id':scanSelected,
+        'data-scan-viz-mode':'resize',class:'qt-scan-handle','aria-label':`Laser ${scanSelected+1} vergrößern oder verkleinern`},svg);
+    }
+    $('qt-scan-selection').textContent=`Laser ${scanSelected+1} ausgewählt`;
+    $('qt-scan-editor-status').textContent='Scannerfelder: Drag = verschieben · weißer Griff = Breite und Höhe ändern · X/Y-Werte unten für Feineinstellung.';
+  }
+  const scanWorld=event=>{const svg=$('qt-scan-editor'),ctm=svg.getScreenCTM();if(!ctm)return null;const p=svg.createSVGPoint();p.x=event.clientX;p.y=event.clientY;return p.matrixTransform(ctm.inverse());};
+  function scanPointerDown(event){
+    const el=event.target.closest('[data-scan-viz-id]');if(!el)return;
+    const i=Number(el.getAttribute('data-scan-viz-id')),s=machine().scans[i],start=scanWorld(event);if(!start||!s)return;
+    event.preventDefault();scanSelected=i;
+    scanDrag={id:i,mode:el.getAttribute('data-scan-viz-mode'),start,s:{...s},changed:false};
+    $('qt-scan-editor').setPointerCapture?.(event.pointerId);showScanEditor();
+  }
+  function scanPointerMove(event){
+    if(!scanDrag)return;const end=scanWorld(event);if(!end)return;
+    const m=machine(),t=m.scans[scanDrag.id],s=scanDrag.s,dx=end.x-scanDrag.start.x,dy=end.y-scanDrag.start.y;
+    const round=x=>Math.round(x*10)/10;
+    if(scanDrag.mode==='move'){
+      const w=s.x1-s.x0,h=s.y1-s.y0;
+      t.x0=round(Math.max(0,Math.min(m.w-w,s.x0+dx)));t.x1=round(t.x0+w);
+      t.y0=round(Math.max(0,Math.min(m.h-h,s.y0+dy)));t.y1=round(t.y0+h);
+    }else{
+      t.x1=round(Math.max(s.x0+Math.min(5,m.w-s.x0),Math.min(m.w,s.x1+dx)));
+      t.y1=round(Math.max(s.y0+Math.min(5,m.h-s.y0),Math.min(m.h,s.y1+dy)));
+    }
+    if(t.x0!==s.x0||t.x1!==s.x1||t.y0!==s.y0||t.y1!==s.y1){scanDrag.changed=true;markScanUnverified();}
+    showScanEditor();
+  }
+  function scanPointerEnd(event){
+    if(!scanDrag)return;const changed=scanDrag.changed;scanDrag=null;
+    if(changed){scanUI();update(true);note('Laserfeld verändert. Maschinenkonfiguration vor PDF-Angebot erneut prüfen.');}
+    else showScanEditor();
+  }
+  function selectScanNumeric(event){const node=event.target.closest('[data-scan-id],[data-scan-active]');if(!node)return;scanSelected=Number(node.dataset.scanId??node.dataset.scanActive);showScanEditor();}
+  // Vorschläge ohne Veränderung der bestehenden Daten; begrenzte Suche für Mobilgeräte.
+  const cloneBeds=b=>JSON.parse(JSON.stringify(b));
+  function trialPlace(part,bed,seed){
+    const m=machine(),gap=data.params.gap,margin=data.params.margin;
+    const rotations=seed%2?[90,0]:[0,90];
+    for(const rot of rotations){
+      const w=rot===90?part.h:part.w,h=rot===90?part.w:part.h;
+      const step=Math.max(6,Math.min(15,Math.min(w,h)/2));
+      const nx=Math.floor((m.w-2*margin-w)/step)+1,ny=Math.floor((m.h-2*margin-h)/step)+1;
+      if(nx<1||ny<1)continue;
+      const forwardX=seed%4<2,forwardY=seed%3!==2;
+      for(let yy=0;yy<=ny;yy++)for(let xx=0;xx<=nx;xx++){
+        const x=margin+w/2+(forwardX?xx:nx-xx)*step,y=margin+h/2+(forwardY?yy:ny-yy)*step;
+        const c={id:'__test__',partId:part.id,x:Math.round(x*10)/10,y:Math.round(y*10)/10,rot};
+        if(validItem(bed,c)&&hasScannerCoverage(part,c,5))return c;
+      }
+    }
+    return null;
+  }
+  function makeOptimizedTrial(seed){
+    const order=[...data.parts];
+    if(seed%3===0)order.sort((a,b)=>b.w*b.h-a.w*a.h);
+    else if(seed%3===1)order.sort((a,b)=>b.z-a.z||b.w*b.h-a.w*a.h);
+    else order.sort((a,b)=>a.w*a.h-b.w*b.h);
+    const beds=[{id:1,items:[]}];let uid=0,placed=0;
+    for(const p of order)for(let j=0;j<p.qty;j++){
+      let cand=null,bed=null;
+      for(const b of beds){const c=trialPlace(p,b,seed);if(c){cand=c;bed=b;break;}}
+      if(!cand&&beds.length<12){const b={id:beds.length+1,items:[]},c=trialPlace(p,b,seed);if(c){beds.push(b);bed=b;cand=c;}}
+      if(!cand)return {beds,placed,complete:false};
+      bed.items.push({...cand,id:`opt${seed}_${++uid}`});placed++;
+    }
+    return {beds,placed,complete:true};
+  }
+  function optScore(r,beds,goal){
+    if(goal==='cost')return r.direct;
+    if(goal==='space')return -(beds[0]?.items.length||0)*1e5+r.jobCount*1000+r.sumHours;
+    return r.sumHours;
+  }
+  function renderOptResult(before,after,beds,goal){
+    const label=goal==='time'?'Bauzeit':goal==='cost'?'Herstellkosten':'Stück auf erster Platte';
+    const diff=before?after.sumHours-before.sumHours:null;
+    $('qt-opt-results').innerHTML=`<div class="results">${metrics([
+      ['Platten',`${before?.jobCount??'—'} → ${after.jobCount}`,'mit Bauteilen'],
+      ['Bauzeit',`${before?fmt(before.sumHours,2):'—'} → ${fmt(after.sumHours,2)} h`,'Modellschätzung'],
+      ['Direkte Kosten',`${before?euro(before.direct):'—'} → ${euro(after.direct)}`,'ohne Zuschläge'],
+      ['Erste Platte',`${before?.beds?.[0]?.num!=null?(data.beds[0]?.items.length||0):'—'} → ${beds[0].items.length}`,'Bauteile']
+    ])}</div><p class="helper">Ziel: ${esc(label)}. ${before?`Änderung Bauzeit ${diff>=0?'+':''}${fmt(diff,2)} h.`:'Bisherige Belegung unvollständig.'} Die Kandidaten wurden mit der gleichen Näherung berechnet. Vor Fertigung im Slicer prüfen.</p>`;
+  }
+  async function runOptimization(){
+    if(optBusy)return;optBusy=true;$('qt-opt-run').disabled=true;$('qt-opt-apply').disabled=true;optPreview=null;
+    $('qt-opt-results').innerHTML='';
+    try{
+      validateNumbers();
+      const count=partsTotal();if(!count)throw Error('Bitte zuerst Bauteile hinzufügen.');
+      if(count>55)throw Error('Mobile Optimierung bis 55 Teile begrenzt. Größere Lose bitte manuell / über eine externe Nestingsoftware planen.');
+      if(data.parts.some(p=>p.w>machine().w||p.h>machine().h))throw Error('Ein Bauteil ist größer als die Bauplatte.');
+      const goal=$('qt-opt-goal').value;
+      let before=null;try{if(!validateLayout().length)before=estimate();}catch(e){}
+      let winner=before?{beds:cloneBeds(data.beds),result:before,score:optScore(before,data.beds,goal),original:true}:null;
+      const total=6;
+      for(let seed=0;seed<total;seed++){
+        $('qt-opt-status').textContent=`Variante ${seed+1} von ${total} wird getestet …`;
+        await new Promise(r=>setTimeout(r,15));
+        const trial=makeOptimizedTrial(seed);
+        if(trial.complete){
+          const result=estimate(trial.beds),score=optScore(result,trial.beds,goal);
+          if(!winner||score<winner.score-1e-7)winner={beds:trial.beds,result,score,original:false};
+        }
+      }
+      if(!winner)throw Error('Für die aktuellen Mengen wurde keine vollständige gültige Belegung gefunden. Bitte Stückzahlen, Randabstände oder Scannerfelder prüfen.');
+      if(winner.original){$('qt-opt-status').textContent='Die bestehende vollständige Belegung ist in den getesteten Varianten bereits am besten. Keine Verschlechterung wird vorgeschlagen.';$('qt-opt-results').innerHTML='';return;}
+      optPreview={beds:cloneBeds(winner.beds),goal};
+      renderOptResult(before,winner.result,winner.beds,goal);
+      $('qt-opt-apply').disabled=false;
+      $('qt-opt-status').textContent=`✓ Vorschlag für ${count} Bauteile auf ${winner.result.jobCount} Bauplatte(n) berechnet. Noch nicht übernommen.`;
+    }catch(e){$('qt-opt-status').textContent=e.message;$('qt-opt-status').className='message warn';}
+    finally{optBusy=false;$('qt-opt-run').disabled=false;}
+  }
+  function applyOptimization(){
+    if(!optPreview)return;
+    optUndo=cloneBeds(data.beds);data.beds=cloneBeds(optPreview.beds);
+    data.bedId=Math.max(data.bedId,...data.beds.map(b=>b.id));
+    for(const b of data.beds)for(const item of b.items)item.id=`i${++data.uid}`;
+    optPreview=null;selected=null;activeBed=0;update(true);
+    $('qt-opt-results').innerHTML='';$('qt-opt-apply').disabled=true;
+    $('qt-opt-undo').disabled=false;$('qt-opt-status').textContent='✓ Optimierung übernommen. Mit „rückgängig“ lässt sich die vorherige Belegung wiederherstellen.';
+    note('Optimierte Bauplatten übernommen. Bitte alle Positionen und Scannerfelder kontrollieren.');
+  }
+  function undoOptimization(){if(!optUndo)return;data.beds=cloneBeds(optUndo);optUndo=null;selected=null;activeBed=0;update(true);$('qt-opt-results').innerHTML='';$('qt-opt-apply').disabled=true;$('qt-opt-undo').disabled=true;$('qt-opt-status').textContent='Vorherige Belegung wiederhergestellt.';}
+  function saveCalibrationRecord(){
+    const n=id=>Number(String($(id).value).replace(',','.'));
+    const pred=n('qt-cal-est'),actual=n('qt-cal-actual'),date=$('qt-cal-date').value;
+    if(!Number.isFinite(pred)||!Number.isFinite(actual)||pred<=0||actual<=0||pred>1e5||actual>1e5){note('Prognose und tatsächliche Bauzeit müssen > 0 h und plausibel sein.',true);return;}
+    if(actual/pred<.2||actual/pred>5){note('Referenz unterscheidet sich um mehr als Faktor 5: Eingaben / Zeiteinheit prüfen.',true);return;}
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){note('Bitte ein gültiges Baujobdatum eingeben.',true);return;}
+    if(machine().scans.filter(x=>x.enabled).length===0){note('Für die Referenz muss mindestens ein Laser aktiv sein.',true);return;}
+    if(calRecords.length>=300){note('Maximal 300 Referenzen. Alte Einträge löschen oder vorher exportieren.',true);return;}
+    calRecords.unshift({id:`cal${Date.now()}_${Math.floor(Math.random()*1e6)}`,machine:data.machine,material:data.material,layer:data.params.layer,lasers:machine().scans.filter(s=>s.enabled).length,predicted:pred,actual,date,note:$('qt-cal-note').value.trim().slice(0,120)});
+    saveCalibration();update(true);note(`Referenz gespeichert (${fmt(actual/pred,3)} ×); Korrektur nur bei passender Konfiguration und aktiviertem Schalter.`);
+  }
+  // Bewusst strikt: keine stille Interpretation von erstem/letztem Zeitstempel als Baujobzeit.
+  function parseLogDate(line){
+    let match=line.match(/(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    let parts=match?[+match[1],+match[2],+match[3],+match[4],+match[5],+(match[6]||0)]:null;
+    if(!parts){match=line.match(/(\d{1,2})\.(\d{1,2})\.(20\d{2})[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);if(match)parts=[+match[3],+match[2],+match[1],+match[4],+match[5],+(match[6]||0)];}
+    if(!parts)return null;
+    const [y,m,d,h,min,sec]=parts;if(m<1||m>12||d<1||d>31||h>23||min>59||sec>59)return null;
+    const ms=Date.UTC(y,m-1,d,h,min,sec),test=new Date(ms);
+    return test.getUTCFullYear()===y&&test.getUTCMonth()===m-1&&test.getUTCDate()===d?ms:null;
+  }
+  async function importCalLog(event){
+    const f=event.target.files?.[0];if(!f)return;
+    try{
+      if(f.size>6*1024*1024)throw Error('Logdatei zu groß (max. 6 MB).');
+      const str=await f.text(),lines=str.split(/\r?\n/).slice(0,120000);
+      const starts=[],ends=[];
+      const startPattern=/(?:\bbuild\s*(?:job)?\s*(?:start|started)\b|\bjob\s*start(?:ed)?\b|\bstart\s*(?:of\s*)?(?:build|job|baujob)\b|\bbaujob\s*(?:gestartet|begonnen|start)\b|\bbaustart\b)/i;
+      const endPattern=/(?:\bbuild\s*(?:job)?\s*(?:end|finished|completed|complete)\b|\bjob\s*(?:end|finished|completed)\b|\b(?:baujob|bauauftrag)\s*(?:beendet|fertig|abgeschlossen)\b|\bbauende\b)/i;
+      for(const line of lines){const t=parseLogDate(line);if(t===null)continue;if(startPattern.test(line))starts.push({t,line:line.slice(0,180)});if(endPattern.test(line))ends.push({t,line:line.slice(0,180)});}
+      if(!starts.length||!ends.length)throw Error(`Keine eindeutigen Baujob-Start-/Endmarker erkannt (Start: ${starts.length}, Ende: ${ends.length}). Bitte die reale Bauzeit manuell übernehmen.`);
+      let best=null;
+      for(const st of starts)for(const en of ends){const hr=(en.t-st.t)/3600000;if(hr>.01&&hr<1500&&(!best||hr<best.hours)){best={hours:hr,st,en};}}
+      if(!best)throw Error('Start und Ende konnten nicht als plausible Baujobdauer verknüpft werden.');
+      $('qt-cal-actual').value=best.hours.toFixed(3);
+      const d=new Date(best.st.t);$('qt-cal-date').value=`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+      $('qt-cal-loginfo').textContent=`✓ Kandidat ${fmt(best.hours,3)} h ermittelt. ${starts.length} Start- und ${ends.length} Endmarker gefunden. Start: „${best.st.line}“ · Ende: „${best.en.line}“. Achtung: Zeitstempel ohne explizite Zeitzone, Zeilen/Zeit gegen Original kontrollieren, anschließend manuell speichern.`;
+    }catch(e){$('qt-cal-loginfo').textContent=`Kein automatischer Zeitimport: ${e.message}`;}finally{event.target.value='';}
+  }
+
   const register=()=>{
+    // V3.2 Scannereditor: Pointer Capture auf dem stabilen SVG, numerische Steuerung bleibt erhalten.
+    $('qt-scan-editor').addEventListener('pointerdown',scanPointerDown);
+    $('qt-scan-editor').addEventListener('pointermove',scanPointerMove);
+    $('qt-scan-editor').addEventListener('pointerup',scanPointerEnd);
+    $('qt-scan-editor').addEventListener('pointercancel',scanPointerEnd);
+    $('qt-scan-rows').addEventListener('focusin',selectScanNumeric);
+    $('qt-scan-rows').addEventListener('click',selectScanNumeric);
+    $('qt-scan-reset-selected').addEventListener('click',()=>{
+      const m=machine(),s=m.scans[scanSelected];if(!s)return;
+      const w=s.x1-s.x0,h=s.y1-s.y0;if(w<=0||h<=0||w>m.w||h>m.h)return;
+      s.x0=+(Math.max(0,(m.w-w)/2)).toFixed(1);s.x1=+(s.x0+w).toFixed(1);
+      s.y0=+(Math.max(0,(m.h-h)/2)).toFixed(1);s.y1=+(s.y0+h).toFixed(1);
+      markScanUnverified();scanUI();update(true);note('Laserfeld zentriert. Bitte reale Scannergrenzen abgleichen.');
+    });
+    $('qt-opt-run').addEventListener('click',runOptimization);
+    $('qt-opt-apply').addEventListener('click',applyOptimization);
+    $('qt-opt-undo').addEventListener('click',undoOptimization);
+    $('qt-opt-goal').addEventListener('change',()=>{optPreview=null;$('qt-opt-apply').disabled=true;$('qt-opt-results').innerHTML='';$('qt-opt-status').textContent='Optimierungsziel geändert – bitte neu berechnen.';});
+    $('qt-cal-active').addEventListener('change',()=>{calEnabled=$('qt-cal-active').checked;saveCalibration();update(true);note(calEnabled?'Kalibrierfaktor aktiviert (nur bei passender Konfiguration).':'Kalibrierung ausgeschaltet.');});
+    $('qt-cal-bed').addEventListener('change',()=>{const b=lastCalc?.beds.find(x=>String(x.num)===$('qt-cal-bed').value);if(b)$('qt-cal-est').value=b.rawJobH.toFixed(3);calBedLast=$('qt-cal-bed').value;});
+    $('qt-cal-save').addEventListener('click',saveCalibrationRecord);
+    $('qt-cal-log-file').addEventListener('change',importCalLog);
+    $('qt-cal-export').addEventListener('click',()=>dwn(JSON.stringify({format:'BeckerTools-CalV32',version:1,records:calRecords},null,2),'Becker_Bauzeitreferenzen_V3.2.json','application/json'));
+    $('qt-cal-import').addEventListener('click',()=>$('qt-cal-import-file').click());
+    $('qt-cal-import-file').addEventListener('change',async event=>{
+      const f=event.target.files?.[0];if(!f)return;
+      try{if(f.size>1000000)throw Error('Datei zu groß (maximal 1 MB).');
+        const payload=JSON.parse(await f.text());if(payload.format!=='BeckerTools-CalV32'||!Array.isArray(payload.records))throw Error('Keine unterstützte Kalibrierungsdatei.');
+        const refs=payload.records;if(refs.length>300||refs.some(x=>!isValidCalRecord(x)))throw Error('Ungültige oder zu viele Referenzen.');
+        if(!confirm(`${refs.length} Referenzen importieren und bestehende ersetzen?`))return;
+        calRecords=refs;saveCalibration();update(true);note('Referenzbaujobs importiert.');
+      }catch(e){note('Import fehlgeschlagen: '+e.message,true);}finally{event.target.value='';}
+    });
     Object.entries(fields).forEach(([key,id])=>{
       $(id).addEventListener(key==='machine'||key==='material'?'change':'input',()=>{
         data[key]=$(id).value;
@@ -718,5 +975,5 @@
   normalize();
   if(!data.offer.valid){const dt=new Date();dt.setDate(dt.getDate()+30);data.offer.valid=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;}
   const printContainer=document.createElement('div');printContainer.id='qt-offer-print';document.body.append(printContainer);
-  putInputs();register();showStep(0);
+  putInputs();$('qt-cal-date').value=new Date().toLocaleDateString('sv-SE');register();renderCal();showStep(0);
 })();

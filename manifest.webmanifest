@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Becker Tools – Angebote, LPBF, Wärmebehandlung & Timer",
   "short_name": "Becker Tools",
-  "description": "Angebotskalkulation, STL-Konturen, verschiebbare Bauplatten, Mehrlaser-Bauzeit, LPBF-Rechner, Wärmebehandlung und Timer.",
+  "description": "Angebotskalkulation, STL-Konturen, interaktive Laserfelder, optimierte Bauplatten, Bauzeitkalibrierung und Mehrlaser-Bauzeit, LPBF-Rechner, Wärmebehandlung und Timer.",
   "lang": "de-DE",
   "start_url": "./index.html",
   "scope": "./",

@@ -1,4 +1,4 @@
-BECKER TOOLS V3.1 – iPHONE-WEBAPP
+BECKER TOOLS V3.2 – iPHONE-WEBAPP
 ================================
 LPBF – Bauteile, STL, frei positionierbare Bauplatte, Mehrlaser-Zeiten, Kalkulation und Kundenangebot.
 Alle bestehenden Module aus V2.1 (Laser, einfacher Referenz-Bauzeitrechner, Kosten,
@@ -87,7 +87,7 @@ Wärmezeit: Prozesszeitenplaner, Programmvorlagen, Kalenderexport,
 Timerübernahme. WB-Auswertung: CSV-Temperaturen, Lösungsglühen,
 Warmauslagerung, Report. Plus vorhandene LPBF-/Materialwerkzeuge.
 
-V3.1 LASERKONFIGURATION
+V3.1 LASERKONFIGURATION (weiterhin enthalten)
 - Laser in einer Reihe: je Scanner X-von/bis und Y-von/bis sowie Aktiv/Inaktiv.
 - Beispiel-Scanfelder mit editierbarer nominaler Nachbar-Ueberlappung automatisch erzeugen; auf reale Bereiche abgleichen.
 - Markierte Ueberlappungen erlauben lastausgleichende Zuteilung ohne doppeltes Zaehlen.
@@ -96,3 +96,55 @@ V3.1 LASERKONFIGURATION
 - PDF erst nach aktivem Haken fuer kontrollierte echte Maschinenfelder.
 - Scannerfelder werden je Maschine und Projekt gespeichert, JSON-Backup enthaelt die Konfiguration.
 - SCHEMATISCHE STARTWERTE: Scannerbereich, Ueberlappung und Effizienz sind keine Herstellerspezifikationen!
+
+
+V3.2 – INTERAKTIVE LASERFELDER
+-----------------------------
+Angebote > 2 Bauplatte > „Interaktiver Laserkonfigurator“.
+- Scannerfeld antippen, mit Finger/Maus verschieben. Am weißen unteren
+  rechten Griff skalieren. X0/X1/Y0/Y1 als präzise Alternative editieren.
+- Überlappung wird sichtbar markiert; Felder ohne gültige Abmessungen
+  werden bei der Kalkulation abgelehnt.
+- Jede Feldänderung hebt die Bestätigung der Maschinen-Konfiguration auf.
+  Scanfelder nur nach Abgleich mit echten Maschinenangaben bestätigen.
+
+V3.2 – OPTIMIERUNG
+-----------------
+Angebote > 2 Bauplatte > „Bauplatte optimieren“.
+- Ziel wählen: Zeit / direkte Kosten / möglichst viele Teile auf Platte 1.
+- Bis 55 Teile; 6 begrenzte Suchvarianten (Heuristik, keine Garantie
+  auf globale Optimalität). Bestehende gültige Belegung wird nicht
+  durch ein rechnerisch schlechteres Ergebnis ersetzt.
+- Vorschau vor Anwendung, dann übernehmen oder eine Ebene zurück.
+- 2D-Projektion/Bauteilabstände/aktive Laserfelder werden berücksichtigt.
+  Nicht berücksichtigt sind tatsächliche Schichtgeometrie, Supportkollisionen,
+  thermische Wechselwirkung, konkrete Scanvektoren und Scannerwartezeiten.
+
+V3.2 – KALIBRIERUNG UND LOGDATEIEN
+---------------------------------
+Angebote > 3 Bauzeit > „Bauzeitkalibrierung mit echten Baujobs“.
+- Prognose je Platte (unkalibriert) wählen oder früheren Wert eingeben.
+- Reale Bauzeit in Stunden, Datum und optional Notiz erfassen.
+- Referenzen gelten nur für dieselbe Maschine, Material, Schichtdicke
+  und dieselbe Zahl aktiver Laser. Korrektur ist STANDARDMÄSSIG AUS.
+- Bei Aktivierung wird der Median Ist / unkalibrierte Prognose auf
+  neue Jobzeiten angewendet, begrenzt auf Faktor 0,5–2,0.
+  Weniger als 3 Referenzen sind stark unsicher; Kalibrierung ersetzt
+  keine Slicer-Validierung. Absolute Herstellzeiten können dennoch
+  beträchtlich vom Modell abweichen.
+- Export/Import separat per Referenz-JSON; im vollständigen Becker-Tools-
+  Backup unter „Profile“ ebenfalls enthalten.
+- Experimenteller Text-/CSV-/Log-Import: erkennt nur explizite
+  Start- und Ende-Markierungen mit Zeitstempel. Den ausgelesenen
+  Zeitraum gegen die tatsächliche Maschinen-Aufzeichnung abgleichen.
+  Bei anderen Logformaten echte Bauzeit manuell eingeben.
+
+UPDATE VON V3.1
+---------------
+Alte Projektdaten bleiben bei gleicher GitHub-Pages-URL und identischer
+Browserdaten-Umgebung erhalten (Schlüssel in localStorage unverändert).
+ZUR SICHERHEIT vor dem Update unter „Profile“ vollständiges JSON-Backup
+exportieren. Danach alle Dateien im Repository aktualisieren. Bei
+Cache-/PWA-Problemen GitHub Pages in Safari erneut aufrufen und neu laden.
+Einzeldatei V3.2: vollständig eingebundene Skripte; diese als index.html
+im GitHub Pages Root ablegen (nicht gleichzeitig externe quote.js nötig).

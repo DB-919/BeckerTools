@@ -236,15 +236,32 @@
 .qt-scanhead label{display:flex;gap:8px;align-items:center}
 .qt-overlap-key{color:#9bf0e3;font-weight:650}
 @media(max-width:410px){.qt-scanfields{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* V3.2 – Scannereditor, Optimierer, Kalibrierung */
+.qt-visual-editor{margin-top:15px;padding:14px;background:#0d1d30;border:1px solid #3a526c;border-radius:15px}
+.qt-visual-editor h4{margin:0;font-size:15px}
+.qt-scan-visual-wrap{max-width:100%;margin:12px auto;background:#0a1625;border:1px solid #344e68;border-radius:12px;overflow:hidden}
+#qt-scan-editor{display:block;width:100%;height:auto;touch-action:none;max-height:430px}
+#qt-scan-editor .qt-scan-area{cursor:grab;touch-action:none}
+#qt-scan-editor .qt-scan-handle{cursor:nwse-resize;touch-action:none}
+#qt-scan-editor .qt-scan-area:focus{outline:none;stroke:white;stroke-width:3}
+.qt-cal-toggle{display:flex;align-items:center;gap:10px;margin:12px 0;padding:12px;border:1px solid #385574;border-radius:11px;line-height:1.35}
+.qt-cal-toggle input{width:22px;height:22px;min-height:22px;flex:none;accent-color:#66d8b7}
+#qt-calibration-card .grid,#qt-opt-card .grid{margin:12px 0}
+#qt-cal-list{margin-top:12px}
+#qt-opt-results .results{margin-top:12px}
+#qt-opt-goal{width:100%;max-width:100%}
+#qt-opt-results .subcard{margin-top:12px}
+@media(max-width:390px){.qt-visual-editor{padding:9px}#qt-scan-editor{min-height:150px}}
 </style>
 </head>
 <body>
 <main class="app">
   <header class="brand">
-    <div class="brand-text"><div class="brand-mark" aria-hidden="true">B<span style="color:#baf4ff">T</span></div><div><h1>Becker Tools</h1><span class="sub">Angebote · Additive Fertigung · Wärmebehandlung · V3.1</span></div></div>
+    <div class="brand-text"><div class="brand-mark" aria-hidden="true">B<span style="color:#baf4ff">T</span></div><div><h1>Becker Tools</h1><span class="sub">Angebote · Additive Fertigung · Wärmebehandlung · V3.2</span></div></div>
     <div class="badge" id="storage-badge">● Lokal</div>
   </header>
-  <section class="hero" aria-label="Einführung"><div class="eyebrow">BECKER TOOLS · V3.1</div><h2>Vom Bauteil zum Angebot.</h2><p>Bauteile erfassen, STL importieren, auf der Bauplatte verschieben, Mehrlaserzeiten kalkulieren und Angebote erstellen. Alle bisherigen Werkzeuge bleiben erhalten.</p></section>
+  <section class="hero" aria-label="Einführung"><div class="eyebrow">BECKER TOOLS · V3.2</div><h2>Vom Bauteil zum Angebot.</h2><p>Bauteile erfassen, STL importieren, auf der Bauplatte verschieben, Mehrlaserzeiten kalkulieren und Angebote erstellen. Alle bisherigen Werkzeuge bleiben erhalten.</p></section>
   <nav class="nav" role="tablist" aria-label="Rechenmodule">
     <button id="tab-quote" type="button" role="tab" aria-controls="panel-quote" aria-selected="true" data-tab="quote"><span class="icon" aria-hidden="true">📄</span>Angebote</button>
     <button id="tab-laser" type="button" role="tab" aria-controls="panel-laser" aria-selected="false" data-tab="laser"><span class="icon" aria-hidden="true">⚡</span>Laser</button>
@@ -311,7 +328,14 @@
         <label>Reihenrichtung<select id="qt-direction"><option value="x">X · links–rechts</option><option value="y">Y · vorne–hinten</option></select></label>
         <div><button type="button" class="btn secondary" id="qt-create-scans" style="margin-top:26px;width:100%">Gleichmäßige Felder erzeugen</button></div>
       </div>
-      <div class="qt-scangrid" id="qt-scan-rows" aria-label="Laserarbeitsbereiche"></div>
+      <div class="qt-visual-editor">
+    <div class="record-header"><h4>Interaktiver Laserkonfigurator</h4><span class="tag" id="qt-scan-selection">Laser 1 ausgewählt</span></div>
+    <p class="helper">Laserfeld antippen und <strong>mit dem Finger verschieben</strong>. Am weißen Griff unten rechts vergrößern oder verkleinern. Die exakten Maße darunter bleiben jederzeit bearbeitbar. Jede Änderung entfernt die Maschinenfreigabe.</p>
+    <div class="qt-scan-visual-wrap"><svg id="qt-scan-editor" role="img" aria-label="Laserfelder auf der Bauplatte. Per Fingergeste bewegen und am Griff vergrößern." viewBox="0 0 500 280"></svg></div>
+    <div class="actions"><button class="btn secondary" id="qt-scan-reset-selected" type="button">Gewählten Laser zentrieren</button></div>
+    <p class="helper" id="qt-scan-editor-status" role="status"></p>
+  </div>
+  <div aria-label="Laserarbeitsbereiche" class="qt-scangrid" id="qt-scan-rows"></div>
       <label class="qt-confirm"><input type="checkbox" id="qt-scans-verified"> <span>Scanfelder und Plattenmaße mit den tatsächlichen Maschinendaten abgeglichen</span></label>
       <div class="message warn" id="qt-scan-warning" role="status"></div>
       <div class="actions"><button type="button" class="btn secondary" id="qt-save-scans">Maschinenprofil sichern</button></div>
@@ -326,6 +350,13 @@
       <div class="actions"><button class="btn secondary" id="qt-rot-l" type="button" disabled>↶ 15°</button><button class="btn secondary" id="qt-rot-r" type="button" disabled>↷ 15°</button><button class="btn secondary" id="qt-rot-90" type="button" disabled>↷ 90°</button><button class="btn danger" id="qt-remove-item" type="button" disabled>Ausgewähltes entfernen</button></div>
       <div id="qt-layout-status" class="message" role="status"></div>
     </div>
+    <div class="card" id="qt-opt-card">
+  <div class="record-header"><h3>⚡ Bauplatte optimieren</h3><span class="tag">V3.2</span></div>
+  <p class="helper">Testet alternative Anordnungen inklusive 90°-Rotationen und Scanner-Abdeckung. Die Vorschau ändert deine Bauplatten <strong>nicht</strong>. Erst „Vorschlag übernehmen“ ersetzt die Belegung. Rechenmodell: vereinfachte XY- und Volumenlast, kein Slicer.</p>
+  <div class="grid"><label>Optimierungsziel<select id="qt-opt-goal"><option value="time">Minimale geschätzte Bauzeit</option><option value="cost">Geringste Herstellungskosten</option><option value="space">Möglichst viele Teile auf der ersten Platte</option></select></label></div>
+  <div class="actions"><button class="btn primary" id="qt-opt-run" type="button">Bauplatten-Vorschläge berechnen</button><button class="btn secondary" id="qt-opt-apply" type="button" disabled>Vorschlag übernehmen</button><button class="btn secondary" id="qt-opt-undo" type="button" disabled>Letzte Übernahme rückgängig</button></div>
+  <div class="message" id="qt-opt-status" role="status">Noch keine Optimierung berechnet.</div><div id="qt-opt-results"></div>
+</div>
   </div>
   <div class="qt-page" id="qt-page-2" hidden>
     <div class="card"><h3>LPBF-Prozessparameter</h3><div class="grid">
@@ -340,6 +371,24 @@
       <label>Bauzeitwarnung (h)<input id="qt-max-time" type="number" value="168" min="1" step="any"></label>
     </div><div class="actions"><button class="btn secondary" id="qt-from-legacy" type="button">Laser- und Kostendaten aus bisherigen Rechnern übernehmen</button></div><p class="helper">Prozessparameter sind Demonstrationswerte, keine Maschinenfreigabe. Konfigurierbare überlappende Scanfelder werden rechnerisch berücksichtigt. Konturarbeit, echte Schichtgeometrien, Scannerfahrten und Wartezeiten werden nicht aus einem Slicer gelesen.</p></div>
     <div class="card"><h3>Mehrlaser-Bauzeitabschätzung</h3><div id="qt-build-overview" class="results"></div><div id="qt-build-details"></div><div class="message warn">Modell: Bauteilvolumen wird anhand der projizierten XY-Fläche aktiven, frei konfigurierbaren Scanfeldern zugeordnet; Überlappungsarbeit wird rechnerisch lastverteilt. Je Schicht wird die Arbeit aus exklusiven und überlappenden Scanfeldern auf die aktiven Laser verteilt; der am stärksten ausgelastete Laser ist zeitbestimmend. Das ist <strong>keine Slicer-Zeitsimulation</strong>.</div><div id="qt-build-warning" class="message error" role="status"></div></div>
+  <div class="card" id="qt-calibration-card">
+    <div class="record-header"><h3>📈 Bauzeitkalibrierung mit echten Baujobs</h3><span class="tag">V3.2</span></div>
+    <p class="helper">Referenzen werden <strong>lokal und maschinen-/material-/schichtdicken-/laserbezogen</strong> gespeichert. Die Kalibrierung verwendet den Median tatsächliche / unkalibrierte Bauzeit. Bereits gespeicherte Referenzen werden nicht rückwirkend verändert.</p>
+    <label class="qt-cal-toggle"><input id="qt-cal-active" type="checkbox"> Kalibrierfaktor für passende neue Kalkulationen anwenden</label>
+    <div class="message" id="qt-cal-stats" role="status">Noch keine passenden Referenzbaujobs.</div>
+    <div class="grid">
+      <label>Referenz-Platte (aktuelle Kalkulation)<select id="qt-cal-bed"><option value="">– Platte wählen –</option></select></label>
+      <label>Unkalibrierte Prognose (h) <span class="hint">Auswahl füllt automatisch – für ältere Jobs manuell ändern</span><input id="qt-cal-est" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="z. B. 38.5"></label>
+      <label>Reale Bauzeit (h)<input id="qt-cal-actual" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="z. B. 42.0"></label>
+      <label>Datum des Jobs<input id="qt-cal-date" type="date"></label>
+      <label style="grid-column:1 / -1">Notiz / Baujobnummer<input id="qt-cal-note" maxlength="120" placeholder="Job 0063, Referenzjob, Besonderheiten …"></label>
+    </div>
+    <div class="actions"><button id="qt-cal-save" class="btn primary" type="button">Referenzbaujob speichern</button><button id="qt-cal-export" class="btn secondary" type="button">Referenzen als JSON exportieren</button><button id="qt-cal-import" class="btn secondary" type="button">Referenzen importieren</button><input id="qt-cal-import-file" type="file" accept=".json,application/json" hidden></div>
+    <label>Optional: SLM-Logdatei (.log / .txt / .csv) nach Start-/Endmarkern durchsuchen<input id="qt-cal-log-file" type="file" accept=".log,.txt,.csv,text/plain,text/csv"></label>
+    <p class="helper">Experimenteller, formatabhängiger Import: Nur explizite Baujob-Start- und -End-Marker werden erkannt; kein universeller SLM-Logparser. Erkannte Zeit unbedingt mit dem Originalprotokoll abgleichen.</p>
+    <div class="message" id="qt-cal-loginfo" role="status">Alternativ die echte Bauzeit manuell eintragen.</div>
+    <div id="qt-cal-list"></div>
+  </div>
   </div>
   <div class="qt-page" id="qt-page-3" hidden>
     <div class="card"><h3>Kostensätze und Zuschläge</h3><div class="grid">
@@ -524,7 +573,7 @@
     <div class="card"><h3>Backup</h3><p class="storage-note">Das JSON-Backup umfasst zusätzlich den Angebotsworkflow samt Bauteilen, Bauplatten, STL-Konturen und gespeicherten Projekten, außerdem Materialdatenbank, Vergleiche, WB-Projekte, Temperaturmessungen und Wärmezeit-Pläne und -Programme. Große Messdateien können entsprechend große Backup-Dateien ergeben. Ältere V1.0-Backups können weiter importiert werden.</p></div>
     <div class="card"><h3>Hinweise zur Berechnung</h3><p class="storage-note">Die Energiedichte ist nur eine Kenngröße; Spotgröße, Strahlprofil, Scanstrategie, Konturen und Material beeinflussen das Ergebnis. Der einfache Bauzeitrechner arbeitet weiterhin als Einlaser-Referenzmodell. Für Mehrlaser-Abschätzungen das Modul Angebote nutzen. Dort werden idealisierte Zonen schichtweise berücksichtigt. Für belastbare Angebote den Baujob im Slicer simulieren und die Zeiten kalibrieren.</p></div>
   </section>
-  <footer>Becker Tools · V3.1 · Offlinefähige WebApp<br>Berechnungen lokal auf deinem Gerät · Keine Prozessfreigabe</footer>
+  <footer>Becker Tools · V3.2 · Offlinefähige WebApp<br>Berechnungen lokal auf deinem Gerät · Keine Prozessfreigabe</footer>
 </main>
 <div id="wb-print-report"></div>
 <script>
@@ -662,7 +711,7 @@
   const stamp=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
   const exportCSV=()=>{
     compute();
-    const items=[['Becker Tools','LPBF / SLM Rechner V3.1'],['Datum',new Date().toLocaleString('de-DE')],[],['Eingaben','Wert','Einheit']];
+    const items=[['Becker Tools','LPBF / SLM Rechner V3.2'],['Datum',new Date().toLocaleString('de-DE')],[],['Eingaben','Wert','Einheit']];
     const labels={power:['Laserleistung','W'],speed:['Scangeschwindigkeit','mm/s'],hatch:['Hatchabstand','mm'],layer:['Schichtdicke','µm'],target:['Ziel-Energiedichte','J/mm³'],machine:['Anlage',''],height:['Bauhöhe','mm'],pieces:['Bauteile','Stück'],volume:['Volumen je Bauteil','cm³'],support:['Supportanteil','%'],efficiency:['Scananteil','%'],recoat:['Beschichtung je Schicht','s'],fixed:['Zusatzzeit je Job','min'],limit:['Bauzeitgrenze','h'],material:['Material',''],density:['Dichte','g/cm³'],powderPrice:['Pulverpreis','€/kg'],powderLoss:['Pulververlust','%'],machineRate:['Maschinenstundensatz','€/h'],setupCost:['Rüstkosten','€'],postCost:['Nachbearbeitung je Stück','€'],markup:['Kalkulationszuschlag','%']};
     for(const k in labels){items.push([labels[k][0],inputs[k].value,labels[k][1]]);}
     items.push([],['Ergebnisse','Wert','Einheit']);
