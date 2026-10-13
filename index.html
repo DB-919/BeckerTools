@@ -237,7 +237,7 @@
 .qt-overlap-key{color:#9bf0e3;font-weight:650}
 @media(max-width:410px){.qt-scanfields{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
-/* V3.2 – Scannereditor, Optimierer, Kalibrierung */
+/* V3.2.1 – Referenzdatenbank: Volumen- und Schicht-basierte Kalibrierung */
 .qt-visual-editor{margin-top:15px;padding:14px;background:#0d1d30;border:1px solid #3a526c;border-radius:15px}
 .qt-visual-editor h4{margin:0;font-size:15px}
 .qt-scan-visual-wrap{max-width:100%;margin:12px auto;background:#0a1625;border:1px solid #344e68;border-radius:12px;overflow:hidden}
@@ -253,15 +253,28 @@
 #qt-opt-goal{width:100%;max-width:100%}
 #qt-opt-results .subcard{margin-top:12px}
 @media(max-width:390px){.qt-visual-editor{padding:9px}#qt-scan-editor{min-height:150px}}
+
+/* Referenzdatenbank V3.2.1 */
+.qt-cal-model{margin:13px 0;display:grid;gap:9px}
+.qt-cal-model .subcard{margin:0}
+.qt-cal-model strong{color:#a5e8c8}
+.qt-cal-table{overflow-x:auto;margin-top:10px;border:1px solid var(--line);border-radius:12px}
+.qt-cal-table table{border-collapse:collapse;width:100%;font-size:12px;min-width:660px}
+.qt-cal-table th,.qt-cal-table td{text-align:left;border-bottom:1px solid #2e435a;padding:9px;white-space:nowrap}
+.qt-cal-table th{background:#1d3044;color:#d3e4f2;position:sticky;top:0}
+.qt-cal-table td button{min-height:34px;padding:5px 9px;border-radius:8px;border:1px solid #456783;background:#223e53;color:#e8f6ff;font-weight:700}
+.qt-cal-table td button.qt-cal-del{background:#402630;border-color:#88515c}
+.qt-cal-muted{color:var(--muted);font-size:12px}
+.qt-cal-actions{display:flex;gap:6px}
 </style>
 </head>
 <body>
 <main class="app">
   <header class="brand">
-    <div class="brand-text"><div class="brand-mark" aria-hidden="true">B<span style="color:#baf4ff">T</span></div><div><h1>Becker Tools</h1><span class="sub">Angebote · Additive Fertigung · Wärmebehandlung · V3.2</span></div></div>
+    <div class="brand-text"><div class="brand-mark" aria-hidden="true">B<span style="color:#baf4ff">T</span></div><div><h1>Becker Tools</h1><span class="sub">Angebote · Additive Fertigung · Wärmebehandlung · V3.2.1</span></div></div>
     <div class="badge" id="storage-badge">● Lokal</div>
   </header>
-  <section class="hero" aria-label="Einführung"><div class="eyebrow">BECKER TOOLS · V3.2</div><h2>Vom Bauteil zum Angebot.</h2><p>Bauteile erfassen, STL importieren, auf der Bauplatte verschieben, Mehrlaserzeiten kalkulieren und Angebote erstellen. Alle bisherigen Werkzeuge bleiben erhalten.</p></section>
+  <section class="hero" aria-label="Einführung"><div class="eyebrow">BECKER TOOLS · V3.2.1</div><h2>Vom Bauteil zum Angebot.</h2><p>Bauteile erfassen, STL importieren, auf der Bauplatte verschieben, Mehrlaserzeiten kalkulieren und Angebote erstellen. Alle bisherigen Werkzeuge bleiben erhalten.</p></section>
   <nav class="nav" role="tablist" aria-label="Rechenmodule">
     <button id="tab-quote" type="button" role="tab" aria-controls="panel-quote" aria-selected="true" data-tab="quote"><span class="icon" aria-hidden="true">📄</span>Angebote</button>
     <button id="tab-laser" type="button" role="tab" aria-controls="panel-laser" aria-selected="false" data-tab="laser"><span class="icon" aria-hidden="true">⚡</span>Laser</button>
@@ -372,21 +385,32 @@
     </div><div class="actions"><button class="btn secondary" id="qt-from-legacy" type="button">Laser- und Kostendaten aus bisherigen Rechnern übernehmen</button></div><p class="helper">Prozessparameter sind Demonstrationswerte, keine Maschinenfreigabe. Konfigurierbare überlappende Scanfelder werden rechnerisch berücksichtigt. Konturarbeit, echte Schichtgeometrien, Scannerfahrten und Wartezeiten werden nicht aus einem Slicer gelesen.</p></div>
     <div class="card"><h3>Mehrlaser-Bauzeitabschätzung</h3><div id="qt-build-overview" class="results"></div><div id="qt-build-details"></div><div class="message warn">Modell: Bauteilvolumen wird anhand der projizierten XY-Fläche aktiven, frei konfigurierbaren Scanfeldern zugeordnet; Überlappungsarbeit wird rechnerisch lastverteilt. Je Schicht wird die Arbeit aus exklusiven und überlappenden Scanfeldern auf die aktiven Laser verteilt; der am stärksten ausgelastete Laser ist zeitbestimmend. Das ist <strong>keine Slicer-Zeitsimulation</strong>.</div><div id="qt-build-warning" class="message error" role="status"></div></div>
   <div class="card" id="qt-calibration-card">
-    <div class="record-header"><h3>📈 Bauzeitkalibrierung mit echten Baujobs</h3><span class="tag">V3.2</span></div>
-    <p class="helper">Referenzen werden <strong>lokal und maschinen-/material-/schichtdicken-/laserbezogen</strong> gespeichert. Die Kalibrierung verwendet den Median tatsächliche / unkalibrierte Bauzeit. Bereits gespeicherte Referenzen werden nicht rückwirkend verändert.</p>
-    <label class="qt-cal-toggle"><input id="qt-cal-active" type="checkbox"> Kalibrierfaktor für passende neue Kalkulationen anwenden</label>
+    <div class="record-header"><h3>📈 Referenzdatenbank für Bauzeiten</h3><span class="tag">V3.2.1</span></div>
+    <p class="helper">Erfasse abgeschlossene Baujobs mit <strong>Volumen, Schichtzahl, realer und unkalibrierter Bauzeit</strong>. Für jede neue Bauplatte sucht die App ähnliche Jobs (gleiche Maschine, Material, Schichtdicke, Laseranzahl) und gewichtet deren Zeitabweichungen nach Volumen und Schichtzahl. Daten liegen lokal auf diesem Gerät.</p>
+    <label class="qt-cal-toggle"><input id="qt-cal-active" type="checkbox"> Empfohlenen Korrekturfaktor bei neuen Bauzeit- und Angebotskalkulationen anwenden</label>
     <div class="message" id="qt-cal-stats" role="status">Noch keine passenden Referenzbaujobs.</div>
+    <div id="qt-cal-model-info" class="qt-cal-model"></div>
+    <h3>Referenzjob erfassen oder bearbeiten</h3>
     <div class="grid">
-      <label>Referenz-Platte (aktuelle Kalkulation)<select id="qt-cal-bed"><option value="">– Platte wählen –</option></select></label>
-      <label>Unkalibrierte Prognose (h) <span class="hint">Auswahl füllt automatisch – für ältere Jobs manuell ändern</span><input id="qt-cal-est" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="z. B. 38.5"></label>
-      <label>Reale Bauzeit (h)<input id="qt-cal-actual" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="z. B. 42.0"></label>
+      <label class="full">Daten von berechneter Bauplatte übernehmen<select id="qt-cal-bed"><option value="">– Historischen Job manuell erfassen –</option></select></label>
+      <label>Maschine<select id="qt-cal-machine"><option value="500I">SLM 500 I</option><option value="500II">SLM 500 II</option><option value="500III">SLM 500 III</option><option value="280">SLM 280</option></select></label>
+      <label>Material<input id="qt-cal-material" type="text" maxlength="70" list="qt-cal-materials" placeholder="z. B. A20X"><datalist id="qt-cal-materials"><option value="AlSi10Mg"><option value="A20X"><option value="Ti-6Al-4V"><option value="316L"></datalist></label>
+      <label>Schichtdicke (µm)<input id="qt-cal-layer" type="number" inputmode="decimal" min="1" max="1000" step="any" value="30"></label>
+      <label>Aktive Laser<select id="qt-cal-lasers"><option value="1">1 Laser</option><option value="2">2 Laser</option><option value="3">3 Laser</option><option value="4">4 Laser</option></select></label>
+      <label>Volumen inkl. Supports (cm³)<input id="qt-cal-volume" type="number" inputmode="decimal" min="0.001" step="any" placeholder="z. B. 280"></label>
+      <label>Schichtanzahl<input id="qt-cal-layers" type="number" inputmode="numeric" min="1" step="1" placeholder="z. B. 1750"></label>
+      <label>Unkalibrierte Prognose (h)<span class="hint">Aus dem aktuellen Modell – nicht bereits korrigiert!</span><input id="qt-cal-est" type="number" min="0.01" step="any" inputmode="decimal" placeholder="z. B. 38,5"></label>
+      <label>Tatsächliche Bauzeit (h)<input id="qt-cal-actual" type="number" min="0.01" step="any" inputmode="decimal" placeholder="z. B. 42"></label>
       <label>Datum des Jobs<input id="qt-cal-date" type="date"></label>
-      <label style="grid-column:1 / -1">Notiz / Baujobnummer<input id="qt-cal-note" maxlength="120" placeholder="Job 0063, Referenzjob, Besonderheiten …"></label>
+      <label>Jobnummer / Notiz<input id="qt-cal-note" maxlength="120" placeholder="Job 0063"></label>
     </div>
-    <div class="actions"><button id="qt-cal-save" class="btn primary" type="button">Referenzbaujob speichern</button><button id="qt-cal-export" class="btn secondary" type="button">Referenzen als JSON exportieren</button><button id="qt-cal-import" class="btn secondary" type="button">Referenzen importieren</button><input id="qt-cal-import-file" type="file" accept=".json,application/json" hidden></div>
+    <div class="actions"><button id="qt-cal-use-current" class="btn secondary" type="button">Aktuelle Maschinenwerte übernehmen</button><button id="qt-cal-save" class="btn primary" type="button">Referenzbaujob speichern</button><button id="qt-cal-reset" class="btn secondary" type="button">Eingabe zurücksetzen</button></div>
+    <div class="message warn">Bei älteren V3.2-Referenzen fehlen Volumen und Schichten. Sie bleiben gespeichert, fließen aber erst nach Ergänzung dieser Werte in das neue Ähnlichkeitsmodell ein. Faktor 1,000 bedeutet keine Korrektur; bei wenigen/fernen Referenzen wird die Korrektur vorsichtig abgeschwächt. Vor verbindlichen Angeboten mit echten Slicerzeiten plausibilisieren.</div>
+    <div class="actions"><button id="qt-cal-export" class="btn secondary" type="button">Datenbank JSON exportieren</button><button id="qt-cal-export-csv" class="btn secondary" type="button">Excel-CSV exportieren</button><button id="qt-cal-import" class="btn secondary" type="button">JSON importieren</button><button id="qt-cal-import-csv" class="btn secondary" type="button">CSV importieren</button><input id="qt-cal-import-file" type="file" accept=".json,application/json" hidden><input id="qt-cal-import-csv-file" type="file" accept=".csv,text/csv" hidden></div>
     <label>Optional: SLM-Logdatei (.log / .txt / .csv) nach Start-/Endmarkern durchsuchen<input id="qt-cal-log-file" type="file" accept=".log,.txt,.csv,text/plain,text/csv"></label>
-    <p class="helper">Experimenteller, formatabhängiger Import: Nur explizite Baujob-Start- und -End-Marker werden erkannt; kein universeller SLM-Logparser. Erkannte Zeit unbedingt mit dem Originalprotokoll abgleichen.</p>
+    <p class="helper">Experimenteller Logimport: nur eindeutig erkannte Start-/Endmarker, keine universelle SLM-Logauswertung. Zeiten unbedingt kontrollieren.</p>
     <div class="message" id="qt-cal-loginfo" role="status">Alternativ die echte Bauzeit manuell eintragen.</div>
+    <label>Gespeicherte Referenzen filtern<input id="qt-cal-filter" type="search" maxlength="80" placeholder="Jobnummer, Maschine, Material …"></label>
     <div id="qt-cal-list"></div>
   </div>
   </div>
@@ -573,7 +597,7 @@
     <div class="card"><h3>Backup</h3><p class="storage-note">Das JSON-Backup umfasst zusätzlich den Angebotsworkflow samt Bauteilen, Bauplatten, STL-Konturen und gespeicherten Projekten, außerdem Materialdatenbank, Vergleiche, WB-Projekte, Temperaturmessungen und Wärmezeit-Pläne und -Programme. Große Messdateien können entsprechend große Backup-Dateien ergeben. Ältere V1.0-Backups können weiter importiert werden.</p></div>
     <div class="card"><h3>Hinweise zur Berechnung</h3><p class="storage-note">Die Energiedichte ist nur eine Kenngröße; Spotgröße, Strahlprofil, Scanstrategie, Konturen und Material beeinflussen das Ergebnis. Der einfache Bauzeitrechner arbeitet weiterhin als Einlaser-Referenzmodell. Für Mehrlaser-Abschätzungen das Modul Angebote nutzen. Dort werden idealisierte Zonen schichtweise berücksichtigt. Für belastbare Angebote den Baujob im Slicer simulieren und die Zeiten kalibrieren.</p></div>
   </section>
-  <footer>Becker Tools · V3.2 · Offlinefähige WebApp<br>Berechnungen lokal auf deinem Gerät · Keine Prozessfreigabe</footer>
+  <footer>Becker Tools · V3.2.1 · Offlinefähige WebApp<br>Berechnungen lokal auf deinem Gerät · Keine Prozessfreigabe</footer>
 </main>
 <div id="wb-print-report"></div>
 <script>

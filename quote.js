@@ -484,10 +484,10 @@
         loads.forEach((v,i)=>totalLaserVolume[i]+=v*span);
         layerDistribution.push({from:bottom+1,to:top,laserLoad:loads});
       }
-      const coat=layers*p.recoat/3600,fix=p.fixed/60,rawJobH=exposureH+coat+fix,calFactorUsed=calibrationRatio(),jobH=rawJobH*calFactorUsed;
+      const coat=layers*p.recoat/3600,fix=p.fixed/60,rawJobH=exposureH+coat+fix,calInfo=calPrediction(bedVolume,layers),calFactorUsed=calEnabled?calInfo.factor:1,jobH=rawJobH*calFactorUsed;
       const laserHours=totalLaserVolume.map(v=>v/q);
       for(const {p:part}of entities){const row=totalParts.get(part.id);row.allocated+=(jobH*c.rate+c.setup)*((part.vol*(1+p.support/100))/bedVolume);}
-      beds.push({num:ix+1,layers,exposureH,coat,fix,jobH,rawJobH,calFactorUsed,bedVolume,laserHours,laserVolume:totalLaserVolume,layerDistribution,efficiency:exposureH>0?totalLaserVolume.reduce((a,b)=>a+b,0)/(q*exposureH*Math.max(1,m.scans.filter(s=>s.enabled).length))*100:0});
+      beds.push({num:ix+1,layers,exposureH,coat,fix,jobH,rawJobH,calFactorUsed,bedVolume,calReferenceCount:calInfo.neighbors.length,calConfidence:calInfo.confidence,laserHours,laserVolume:totalLaserVolume,layerDistribution,efficiency:exposureH>0?totalLaserVolume.reduce((a,b)=>a+b,0)/(q*exposureH*Math.max(1,m.scans.filter(s=>s.enabled).length))*100:0});
       sumHours+=jobH;scanH+=exposureH;coatH+=coat;volAll+=bedVolume;jobCount++;maxJob=Math.max(maxJob,jobH);
     }
     const totalQty=[...totalParts.values()].reduce((a,b)=>a+b.n,0);
@@ -506,7 +506,7 @@
     });
     const partsPrice=partLines.reduce((a,b)=>a+b.price,0);
     // Eventuelle Rundungsabweichungen sind nur in der Darstellung zulässig.
-    return {beds,totalQty,volAll,powderKg,machineCost,setupCost,rawMaterial,post,direct,withRisk,net,partsPrice,partLines,sumHours,scanH,coatH,maxJob,jobCount,q,calFactorUsed:calibrationRatio()};
+    return {beds,totalQty,volAll,powderKg,machineCost,setupCost,rawMaterial,post,direct,withRisk,net,partsPrice,partLines,sumHours,scanH,coatH,maxJob,jobCount,q,calFactorUsed:beds.reduce((acc,b)=>acc+b.rawJobH,0)>0?sumHours/beds.reduce((acc,b)=>acc+b.rawJobH,0):1};
   };
   const lineBar=(label,h,max)=>`<div class="qt-barrow"><span>${esc(label)}</span><div class="qt-bartrack"><b style="width:${max>0?Math.max(0,Math.min(100,h/max*100)):0}%"></b></div><strong>${fmt(h,2)} h</strong></div>`;
   const metrics=(arr)=>arr.map(([label,val,unit])=>`<div class="stat"><div class="name">${esc(label)}</div><div class="qt-kpi">${esc(val)}</div><span class="unit">${esc(unit)}</span></div>`).join('');
@@ -515,9 +515,9 @@
     try{
       lastCalc=estimate();const r=lastCalc;
       $('qt-build-overview').innerHTML=metrics([
-        ['Aktive Laser',`${machine().scans.filter(s=>s.enabled).length}/${machine().lasers}`,'Scannerfelder in Reihe'],['Bauplatten',String(r.jobCount),'mit Bauteilen'],['Gesamtbauzeit',`${fmt(r.sumHours,2)} h`,'über alle Bauplatten'],['Aufgeschmolzen',`${fmt(r.volAll,2)} cm³`,'mit rechnerischen Supports'],['Kalibrierung',`${fmt(r.calFactorUsed,3)} ×`,`${matchingRefs().length} passende Referenzen`]
+        ['Aktive Laser',`${machine().scans.filter(s=>s.enabled).length}/${machine().lasers}`,'Scannerfelder in Reihe'],['Bauplatten',String(r.jobCount),'mit Bauteilen'],['Gesamtbauzeit',`${fmt(r.sumHours,2)} h`,'über alle Bauplatten'],['Aufgeschmolzen',`${fmt(r.volAll,2)} cm³`,'mit rechnerischen Supports'],['Kalibrierung',`${fmt(r.calFactorUsed,3)} ×`,`${matchingRefs().filter(hasCalShape).length} verwertbare Referenzen`]
       ]);
-      $('qt-build-details').innerHTML=r.beds.length?r.beds.map(b=>`<div class="subcard"><strong>Platte ${b.num}: ${fmt(b.jobH,2)} h</strong> (roh ${fmt(b.rawJobH,2)} h) · ${b.layers} Schichten <span class="tag">${fmt(b.efficiency,0)} % Parallel-Wirkungsgrad*</span><div class="qt-bars">${b.laserHours.map((h,i)=>lineBar(`Laser ${i+1}`,h,Math.max(...b.laserHours))).join('')}</div><p class="helper">Unkalibrierte Einzelzeiten: Belichtung ${fmt(b.exposureH,2)} h · Beschichten ${fmt(b.coat,2)} h · Nebenzeiten ${fmt(b.fix,2)} h. *Volumenäquivalente Parallelauslastung, nicht Maschinen-Telemetrie.</p></div>`).join(''):'<p class="helper">Noch keine Bauteile auf einer Bauplatte platziert.</p>';
+      $('qt-build-details').innerHTML=r.beds.length?r.beds.map(b=>`<div class="subcard"><strong>Platte ${b.num}: ${fmt(b.jobH,2)} h</strong> (roh ${fmt(b.rawJobH,2)} h) · ${b.layers} Schichten · ${fmt(b.bedVolume,1)} cm³ <span class="tag">Korrektur ×${fmt(b.calFactorUsed,3)} · ${b.calReferenceCount} ähnliche Jobs</span> <span class="tag">${fmt(b.efficiency,0)} % Parallel-Wirkungsgrad*</span><div class="qt-bars">${b.laserHours.map((h,i)=>lineBar(`Laser ${i+1}`,h,Math.max(...b.laserHours))).join('')}</div><p class="helper">Unkalibrierte Einzelzeiten: Belichtung ${fmt(b.exposureH,2)} h · Beschichten ${fmt(b.coat,2)} h · Nebenzeiten ${fmt(b.fix,2)} h. *Volumenäquivalente Parallelauslastung, nicht Maschinen-Telemetrie.</p></div>`).join(''):'<p class="helper">Noch keine Bauteile auf einer Bauplatte platziert.</p>';
       const problems=validateLayout(),over=r.beds.filter(b=>b.jobH>data.params.maxTime);
       $('qt-build-warning').textContent=[...problems,...over.map(b=>`Platte ${b.num}: Bauzeit ${fmt(b.jobH,1)} h über ${data.params.maxTime} h.`)].slice(0,5).join(' ')||'✓ Stückzahlen und Belegung vollständig.';
       $('qt-build-warning').className=problems.length||over.length?'message warn':'message';
@@ -593,38 +593,111 @@
   };
   const API={exportState:()=>({data:snapshot(),projects,calibration:{records:calRecords,enabled:calEnabled}}),importState:p=>{
     if(!p||typeof p!=='object')throw Error('Angebotsbackup unvollständig.');
-    safeQuoteImport(p.data);if(p.calibration&&Array.isArray(p.calibration.records)){calRecords=p.calibration.records.filter(isValidCalRecord).slice(0,300);calEnabled=!!p.calibration.enabled;saveCalibration();}if(Array.isArray(p.projects)){projects=p.projects.filter(o=>o&&o.snapshot&&o.id).slice(0,30);storeProjects();}redrawProjectList();
+    safeQuoteImport(p.data);if(p.calibration&&Array.isArray(p.calibration.records)){calRecords=p.calibration.records.filter(isValidCalRecord).slice(0,300);calEnabled=!!p.calibration.enabled;saveCalibration();}if(Array.isArray(p.projects)){projects=p.projects.filter(o=>o&&o.snapshot&&o.id).slice(0,30);storeProjects();}redrawProjectList();update(true);
   }};
   window.beckerQuote=API;
   // --- Becker Tools V3.2: grafischer Scannereditor, Optimierung, Bauzeitkalibrierung ---
   let scanSelected=0,scanDrag=null,optPreview=null,optUndo=null,optBusy=false;
+  // V3.2.1 – Baumuster-Datenbank; vorhandene V3.2-Referenzen bleiben erhalten.
   const CALKEY='becker-tools-calibration-v32';
-  let calRecords=[],calEnabled=false,calBedLast='';
-  try{const saved=JSON.parse(localStorage.getItem(CALKEY)||'null');if(saved&&Array.isArray(saved.records))calRecords=saved.records.filter(isValidCalRecord).slice(0,300);calEnabled=!!saved?.enabled;}catch(e){}
-  function isValidCalRecord(r){return !!(r&&typeof r.machine==='string'&&typeof r.material==='string'&&Number.isFinite(r.layer)&&r.layer>0&&Number.isInteger(r.lasers)&&r.lasers>=1&&r.lasers<=4&&Number.isFinite(r.predicted)&&r.predicted>.01&&r.predicted<1e5&&Number.isFinite(r.actual)&&r.actual>.01&&r.actual<1e5);}
+  const CALMAX=300;
+  let calRecords=[],calEnabled=false,calBedLast='',editingCalId=null;
+  const hasCalShape=r=>Number.isFinite(r.volume)&&r.volume>0&&r.volume<1e8&&Number.isInteger(r.layers)&&r.layers>0&&r.layers<=25000;
+  function isValidCalRecord(r){
+    return !!(r&&typeof r.machine==='string'&&r.machine in machineNames&&typeof r.material==='string'&&r.material.trim().length>0&&r.material.length<=70&&
+      Number.isFinite(r.layer)&&r.layer>=1&&r.layer<=1000&&Number.isInteger(r.lasers)&&r.lasers>=1&&r.lasers<=data.machines[r.machine].lasers&&
+      Number.isFinite(r.predicted)&&r.predicted>.01&&r.predicted<1e5&&Number.isFinite(r.actual)&&r.actual>.01&&r.actual<1e5&&
+      r.actual/r.predicted>=.2&&r.actual/r.predicted<=5&&
+      ((r.volume==null&&r.layers==null)||hasCalShape(r)));
+  }
+  try{const saved=JSON.parse(localStorage.getItem(CALKEY)||'null');if(saved&&Array.isArray(saved.records))calRecords=saved.records.filter(isValidCalRecord).slice(0,CALMAX);calEnabled=!!saved?.enabled;}catch(e){}
   const saveCalibration=()=>{try{localStorage.setItem(CALKEY,JSON.stringify({records:calRecords,enabled:calEnabled}));}catch(e){note('Referenzspeicher voll: Referenzen als JSON exportieren.',true);}};
   const matchingRefs=()=>calRecords.filter(r=>r.machine===data.machine&&r.material===data.material&&Math.abs(r.layer-data.params.layer)<.01&&r.lasers===machine().scans.filter(s=>s.enabled).length);
-  const median=a=>{const q=[...a].sort((x,y)=>x-y),n=q.length;return n?(n%2?q[(n-1)/2]:(q[n/2-1]+q[n/2])/2):1;};
+  // Kein einfacher globaler Faktor: die Abweichungsquotienten werden für jeden Baujob separat
+  // anhand relativer Volumen- und Schichtunterschiede verglichen. Die Gewichte sinken mit Distanz.
+  const weightedMedian=arr=>{
+    const sorted=[...arr].sort((a,b)=>a.ratio-b.ratio),half=sorted.reduce((sum,e)=>sum+e.weight,0)/2;
+    let seen=0;for(const item of sorted){seen+=item.weight;if(seen>=half)return item.ratio;}
+    return 1;
+  };
+  const calPrediction=(volume,layers)=>{
+    if(!Number.isFinite(volume)||volume<=0||!Number.isFinite(layers)||layers<=0)return {factor:1,neighbors:[],confidence:0,ratio:1};
+    const scored=matchingRefs().filter(hasCalShape).map(r=>{
+      const dv=Math.log2(r.volume/volume)/1.25,dl=Math.log2(r.layers/layers)/.95;
+      const distance=Math.hypot(dv,dl);
+      return {ref:r,distance,weight:Math.exp(-.5*distance*distance),ratio:Math.min(2,Math.max(.5,r.actual/r.predicted))};
+    }).filter(o=>o.distance<=2.5).sort((a,b)=>a.distance-b.distance).slice(0,8);
+    if(!scored.length)return {factor:1,neighbors:[],confidence:0,ratio:1};
+    const weightSum=scored.reduce((sum,r)=>sum+r.weight,0);
+    const ratio=weightedMedian(scored);
+    // Regularisierung Richtung 1,0 bei weniger bzw. entfernteren Baujobs.
+    const confidence=Math.min(.85,weightSum/(weightSum+2));
+    const factor=Math.min(2,Math.max(.5,1+confidence*(ratio-1)));
+    return {factor,neighbors:scored,confidence,ratio};
+  };
   const calFactor=()=>{
-    const refs=matchingRefs();if(!refs.length)return 1;
-    return Math.max(.5,Math.min(2,median(refs.map(r=>r.actual/r.predicted))));
+    const b=lastCalc?.beds?.[0];return b?calPrediction(b.bedVolume,b.layers).factor:1;
   };
   const calibrationRatio=()=>calEnabled?calFactor():1;
+  const newCalId=()=>`cal${Date.now()}_${Math.floor(Math.random()*1000000)}`;
+  function useCurrentCal(){
+    $('qt-cal-machine').value=data.machine;
+    $('qt-cal-material').value=data.material;
+    $('qt-cal-layer').value=data.params.layer;
+    $('qt-cal-lasers').value=String(machine().scans.filter(s=>s.enabled).length||1);
+  }
+  function fillFromBed(b){
+    if(!b)return;
+    useCurrentCal();
+    $('qt-cal-volume').value=b.bedVolume.toFixed(4);
+    $('qt-cal-layers').value=b.layers;
+    $('qt-cal-est').value=b.rawJobH.toFixed(4);
+  }
+  function resetCalForm(){
+    editingCalId=null;calBedLast='';$('qt-cal-bed').value='';
+    useCurrentCal();
+    for(const id of ['qt-cal-volume','qt-cal-layers','qt-cal-est','qt-cal-actual','qt-cal-note'])$(id).value='';
+    $('qt-cal-date').value=new Date().toLocaleDateString('sv-SE');
+    $('qt-cal-save').textContent='Referenzbaujob speichern';
+  }
+  function editCalRecord(i){
+    const r=calRecords[i];if(!r)return;
+    editingCalId=r.id;
+    $('qt-cal-bed').value='';calBedLast='';
+    $('qt-cal-machine').value=r.machine;
+    $('qt-cal-material').value=r.material;
+    $('qt-cal-layer').value=r.layer;
+    $('qt-cal-lasers').value=r.lasers;
+    $('qt-cal-volume').value=hasCalShape(r)?r.volume:'';
+    $('qt-cal-layers').value=hasCalShape(r)?r.layers:'';
+    $('qt-cal-est').value=r.predicted;
+    $('qt-cal-actual').value=r.actual;
+    $('qt-cal-date').value=r.date||new Date().toLocaleDateString('sv-SE');
+    $('qt-cal-note').value=r.note||'';
+    $('qt-cal-save').textContent='Änderungen speichern';
+    $('qt-cal-machine').scrollIntoView({behavior:'smooth',block:'center'});
+    note('Referenz zur Bearbeitung geladen. Speichern ersetzt den gewählten Datensatz.');
+  }
   function renderCal(){
-    const refs=matchingRefs(),factor=calFactor(),ratio=calibrationRatio();
+    const refs=matchingRefs(),shapeRefs=refs.filter(hasCalShape),bedStats=lastCalc?.beds||[];
     $('qt-cal-active').checked=calEnabled;
-    $('qt-cal-stats').textContent=refs.length?
-      `${refs.length} passende Referenz(en) · Median Korrekturfaktor ${fmt(factor,3)} · ${calEnabled?'angewendet':'nicht angewendet'} · ${refs.length<3?'Unter 3 Referenzen: hohe Unsicherheit.':'Keine statistische Prozessfreigabe.'}${Math.abs(factor-median(refs.map(r=>r.actual/r.predicted)))>.001?' Faktor aus Sicherheitsgründen auf 0,50–2,00 begrenzt.':''}`:
-      `Keine Referenz für ${machineNames[data.machine]} · ${data.material} · ${fmt(data.params.layer,2)} µm · ${machine().scans.filter(s=>s.enabled).length} aktive Laser. ${calEnabled?'Faktor bleibt 1,00.':'Kalibrierung ist deaktiviert.'}`;
-    $('qt-cal-stats').className='message'+(refs.length<3?' warn':'');
+    $('qt-cal-stats').textContent=`${calRecords.length} Jobs in der Datenbank · ${refs.length} passend zu ${machineNames[data.machine]} / ${data.material} / ${fmt(data.params.layer,2)} µm / ${machine().scans.filter(s=>s.enabled).length} Laser · ${shapeRefs.length} davon mit Volumen und Schichten. ${calEnabled?'Ähnlichkeitskorrektur aktiviert.':'Korrektur ist deaktiviert.'}`;
+    $('qt-cal-stats').className='message'+(shapeRefs.length<3?' warn':'');
+    $('qt-cal-model-info').innerHTML=bedStats.length?bedStats.map(b=>{
+      const m=calPrediction(b.bedVolume,b.layers),active=calEnabled?m.factor:1;
+      const details=m.neighbors.slice(0,3).map(n=>`${esc(n.ref.note||n.ref.date||'Referenz')}: ${fmt(n.ref.volume,1)} cm³ / ${fmt(n.ref.layers,0)} Schichten / ×${fmt(n.ref.actual/n.ref.predicted,3)}`).join(' · ');
+      return `<div class="subcard"><strong>Platte ${b.num}: empfohlen ×${fmt(m.factor,3)}</strong> ${calEnabled?'· angewendet ×'+fmt(active,3):'· noch nicht angewendet'}<br><span class="qt-cal-muted">${fmt(b.bedVolume,1)} cm³ · ${b.layers} Schichten · roh ${fmt(b.rawJobH,2)} h · korrigiert ${fmt(b.rawJobH*active,2)} h · ${m.neighbors.length} ähnliche Referenzen · Stützung ${fmt(100*m.confidence,0)} %</span>${details?`<p class="helper">Nächste Jobs: ${details}</p>`:'<p class="helper">Keine ausreichend ähnlichen Referenzen. Faktor bleibt 1,000.</p>'}</div>`;
+    }).join(''):'<p class="helper">Eine Bauplatte belegen, um den geometrieabhängigen Korrekturfaktor zu sehen.</p>';
     const sel=$('qt-cal-bed'),old=sel.value;
-    sel.replaceChildren();const p=document.createElement('option');p.value='';p.textContent='– Referenz manuell / ältere Jobdaten –';sel.append(p);
-    if(lastCalc)for(const b of lastCalc.beds){const o=document.createElement('option');o.value=String(b.num);o.textContent=`Platte ${b.num}: ${fmt(b.rawJobH,2)} h (unkalibriert)`;sel.append(o);}
+    sel.replaceChildren();const p=document.createElement('option');p.value='';p.textContent='– Historischen Job manuell erfassen –';sel.append(p);
+    for(const b of bedStats){const o=document.createElement('option');o.value=String(b.num);o.textContent=`Platte ${b.num}: ${fmt(b.bedVolume,1)} cm³ · ${b.layers} Schichten · ${fmt(b.rawJobH,2)} h`;sel.append(o);}
     if([...sel.options].some(o=>o.value===old))sel.value=old;else sel.value='';
-    const key=sel.value;if(key&&calBedLast!==key){const b=lastCalc?.beds.find(x=>String(x.num)===key);if(b)$('qt-cal-est').value=b.rawJobH.toFixed(3);}
+    const key=sel.value;
+    if(key&&calBedLast!==key&&!editingCalId){const b=bedStats.find(x=>String(x.num)===key);if(b)fillFromBed(b);}
     calBedLast=key;
-    $('qt-cal-list').innerHTML=calRecords.length?`<div class="subcard"><strong>Gespeicherte Referenzen (${calRecords.length})</strong>${table(['Datum','Maschine / Material','Soll / Ist','Faktor','Aktion'],calRecords.slice(0,30).map(r=>[r.date||'—',`${machineNames[r.machine]||r.machine} · ${r.material} · ${fmt(r.layer)} µm · ${r.lasers} L`,`${fmt(r.predicted,2)} / ${fmt(r.actual,2)} h`,fmt(r.actual/r.predicted,3),'']))}<p class="helper">Zum Löschen einer Referenz den Eintrag unten wählen. Maximal 300 Referenzen.</p><div class="actions"><select aria-label="Referenz zum Löschen auswählen" id="qt-cal-delete-select">${calRecords.map((r,i)=>`<option value="${i}">${esc((r.note||r.date||'Referenz').slice(0,55))} · ${esc(r.machine)} · ${fmt(r.actual,2)} h</option>`).join('')}</select><button class="btn danger" id="qt-cal-delete" type="button">Gewählte Referenz löschen</button></div></div>`:'<p class="helper">Noch keine Referenzbaujobs gespeichert.</p>';
-    if(calRecords.length)$('qt-cal-delete').addEventListener('click',()=>{const i=Number($('qt-cal-delete-select').value);if(!Number.isInteger(i)||!calRecords[i]||!confirm('Diese Referenz wirklich löschen?'))return;calRecords.splice(i,1);saveCalibration();update(true);note('Referenz entfernt.');});
+    const search=$('qt-cal-filter').value.trim().toLowerCase();
+    const display=calRecords.map((r,i)=>({r,i})).filter(o=>!search||[o.r.note,o.r.date,machineNames[o.r.machine],o.r.material,o.r.volume,o.r.layers].some(v=>String(v??'').toLowerCase().includes(search)));
+    $('qt-cal-list').innerHTML=calRecords.length?`<div class="subcard"><strong>Referenzen (${display.length} von ${calRecords.length})</strong><div class="qt-cal-table"><table><thead><tr><th>Job / Datum</th><th>Maschine / Material</th><th>Volumen / Schichten</th><th>Prognose → Ist</th><th>Faktor</th><th>Aktionen</th></tr></thead><tbody>${display.slice(0,100).map(({r,i})=>`<tr><td>${esc((r.note||'Referenz').slice(0,60))}<br><span class="qt-cal-muted">${esc(r.date||'—')}</span></td><td>${esc(machineNames[r.machine]||r.machine)} · ${esc(r.material)}<br>${fmt(r.layer,2)} µm · ${r.lasers} L</td><td>${hasCalShape(r)?`${fmt(r.volume,2)} cm³ / ${fmt(r.layers,0)} Lagen`:'<span class="qt-cal-muted">Alt – ergänzen</span>'}</td><td>${fmt(r.predicted,2)} → ${fmt(r.actual,2)} h</td><td>×${fmt(r.actual/r.predicted,3)}</td><td><div class="qt-cal-actions"><button type="button" data-cal-edit="${i}">Ändern</button><button type="button" class="qt-cal-del" data-cal-remove="${i}">Löschen</button></div></td></tr>`).join('')}</tbody></table></div>${display.length>100?'<p class="helper">Es werden die ersten 100 Treffer angezeigt – bitte Suche verfeinern.</p>':''}</div>`:'<p class="helper">Noch keine Referenzbaujobs erfasst.</p>';
   }
   function showScanEditor(){
     const svg=$('qt-scan-editor'),m=machine(),colors=['#4eacd5','#63c5aa','#ab98e3','#e2a967'];
@@ -776,15 +849,21 @@
   }
   function undoOptimization(){if(!optUndo)return;data.beds=cloneBeds(optUndo);optUndo=null;selected=null;activeBed=0;update(true);$('qt-opt-results').innerHTML='';$('qt-opt-apply').disabled=true;$('qt-opt-undo').disabled=true;$('qt-opt-status').textContent='Vorherige Belegung wiederhergestellt.';}
   function saveCalibrationRecord(){
-    const n=id=>Number(String($(id).value).replace(',','.'));
-    const pred=n('qt-cal-est'),actual=n('qt-cal-actual'),date=$('qt-cal-date').value;
-    if(!Number.isFinite(pred)||!Number.isFinite(actual)||pred<=0||actual<=0||pred>1e5||actual>1e5){note('Prognose und tatsächliche Bauzeit müssen > 0 h und plausibel sein.',true);return;}
-    if(actual/pred<.2||actual/pred>5){note('Referenz unterscheidet sich um mehr als Faktor 5: Eingaben / Zeiteinheit prüfen.',true);return;}
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){note('Bitte ein gültiges Baujobdatum eingeben.',true);return;}
-    if(machine().scans.filter(x=>x.enabled).length===0){note('Für die Referenz muss mindestens ein Laser aktiv sein.',true);return;}
-    if(calRecords.length>=300){note('Maximal 300 Referenzen. Alte Einträge löschen oder vorher exportieren.',true);return;}
-    calRecords.unshift({id:`cal${Date.now()}_${Math.floor(Math.random()*1e6)}`,machine:data.machine,material:data.material,layer:data.params.layer,lasers:machine().scans.filter(s=>s.enabled).length,predicted:pred,actual,date,note:$('qt-cal-note').value.trim().slice(0,120)});
-    saveCalibration();update(true);note(`Referenz gespeichert (${fmt(actual/pred,3)} ×); Korrektur nur bei passender Konfiguration und aktiviertem Schalter.`);
+    const num=id=>{const str=$(id).value.trim();return str?Number(str.replace(',','.')):NaN;};
+    const predicted=num('qt-cal-est'),actual=num('qt-cal-actual'),volume=num('qt-cal-volume'),layers=num('qt-cal-layers'),layer=num('qt-cal-layer'),lasers=Number($('qt-cal-lasers').value),date=$('qt-cal-date').value;
+    const machineId=$('qt-cal-machine').value,material=$('qt-cal-material').value.trim();
+    const rec={id:editingCalId||newCalId(),machine:machineId,material,layer,lasers,volume,layers,predicted,actual,date,note:$('qt-cal-note').value.trim().slice(0,120)};
+    if(!isValidCalRecord(rec)||!hasCalShape(rec)){
+      note('Bitte Maschine, Material, Volumen (cm³), Schichtzahl, beide Zeiten (h), Schichtdicke und Laseranzahl prüfen. Faktor Ist/Prognose muss zwischen 0,2 und 5 liegen.',true);return;
+    }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){note('Bitte gültiges Baujobdatum angeben.',true);return;}
+    if(!editingCalId&&calRecords.length>=CALMAX){note(`Maximal ${CALMAX} Referenzen. Bitte exportieren/alte Einträge löschen.`,true);return;}
+    const priorIndex=editingCalId?calRecords.findIndex(r=>r.id===editingCalId):-1;
+    if(editingCalId&&priorIndex<0){note('Zu bearbeitender Datensatz nicht mehr vorhanden.',true);return;}
+    if(priorIndex>=0)calRecords.splice(priorIndex,1);
+    calRecords.unshift(rec);
+    saveCalibration();resetCalForm();update(true);
+    note(`Referenz gespeichert: ${fmt(volume,2)} cm³ · ${layers} Schichten · Ist/Prognose ×${fmt(actual/predicted,3)}. Korrektur je Bauplatte nach Ähnlichkeit.`);
   }
   // Bewusst strikt: keine stille Interpretation von erstem/letztem Zeitstempel als Baujobzeit.
   function parseLogDate(line){
@@ -834,20 +913,72 @@
     $('qt-opt-apply').addEventListener('click',applyOptimization);
     $('qt-opt-undo').addEventListener('click',undoOptimization);
     $('qt-opt-goal').addEventListener('change',()=>{optPreview=null;$('qt-opt-apply').disabled=true;$('qt-opt-results').innerHTML='';$('qt-opt-status').textContent='Optimierungsziel geändert – bitte neu berechnen.';});
-    $('qt-cal-active').addEventListener('change',()=>{calEnabled=$('qt-cal-active').checked;saveCalibration();update(true);note(calEnabled?'Kalibrierfaktor aktiviert (nur bei passender Konfiguration).':'Kalibrierung ausgeschaltet.');});
-    $('qt-cal-bed').addEventListener('change',()=>{const b=lastCalc?.beds.find(x=>String(x.num)===$('qt-cal-bed').value);if(b)$('qt-cal-est').value=b.rawJobH.toFixed(3);calBedLast=$('qt-cal-bed').value;});
+    $('qt-cal-active').addEventListener('change',()=>{calEnabled=$('qt-cal-active').checked;saveCalibration();update(true);note(calEnabled?'Korrektur aktiviert: jede Platte erhält ihren eigenen, gedämpften Faktor.':'Korrektur deaktiviert.');});
+    $('qt-cal-bed').addEventListener('change',()=>{editingCalId=null;$('qt-cal-save').textContent='Referenzbaujob speichern';const b=lastCalc?.beds.find(x=>String(x.num)===$('qt-cal-bed').value);if(b)fillFromBed(b);calBedLast=$('qt-cal-bed').value;});
+    $('qt-cal-use-current').addEventListener('click',()=>{useCurrentCal();note('Maschinenwerte übernommen. Volumen/Schichten bitte bei historischen Jobs ergänzen.');});
+    $('qt-cal-reset').addEventListener('click',resetCalForm);
     $('qt-cal-save').addEventListener('click',saveCalibrationRecord);
+    $('qt-cal-filter').addEventListener('input',renderCal);
+    $('qt-cal-list').addEventListener('click',event=>{
+      const e=event.target.closest('[data-cal-edit]'),d=event.target.closest('[data-cal-remove]');
+      if(e){editCalRecord(Number(e.dataset.calEdit));return;}
+      if(d){const i=Number(d.dataset.calRemove),r=calRecords[i];if(!r||!confirm(`Referenz „${r.note||r.date||i+1}“ löschen?`))return;
+        calRecords.splice(i,1);if(editingCalId===r.id)resetCalForm();saveCalibration();update(true);note('Referenz gelöscht.');}
+    });
     $('qt-cal-log-file').addEventListener('change',importCalLog);
-    $('qt-cal-export').addEventListener('click',()=>dwn(JSON.stringify({format:'BeckerTools-CalV32',version:1,records:calRecords},null,2),'Becker_Bauzeitreferenzen_V3.2.json','application/json'));
+    $('qt-cal-export').addEventListener('click',()=>dwn(JSON.stringify({format:'BeckerTools-CalDB',version:2,exported:new Date().toISOString(),records:calRecords},null,2),'Becker_Bauzeitdatenbank_V3.2.1.json','application/json'));
+    const csvFields=['id','maschine','material','schichtdicke_um','laser','volumen_cm3','schichten','prognose_h','ist_h','datum','notiz'];
+    const csvSafe=s=>{let t=String(s??'');if(/^[\s]*[=+@]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
+    $('qt-cal-export-csv').addEventListener('click',()=>{
+      const rows=[csvFields,...calRecords.map(r=>[r.id||'',r.machine,r.material,r.layer,r.lasers,r.volume??'',r.layers??'',r.predicted,r.actual,r.date||'',r.note||''])];
+      dwn('\ufeff'+rows.map(row=>row.map(csvSafe).join(';')).join('\r\n'),'Becker_Bauzeitdatenbank_V3.2.1.csv','text/csv;charset=utf-8');note('Excel-kompatible CSV exportiert.');
+    });
     $('qt-cal-import').addEventListener('click',()=>$('qt-cal-import-file').click());
     $('qt-cal-import-file').addEventListener('change',async event=>{
       const f=event.target.files?.[0];if(!f)return;
-      try{if(f.size>1000000)throw Error('Datei zu groß (maximal 1 MB).');
-        const payload=JSON.parse(await f.text());if(payload.format!=='BeckerTools-CalV32'||!Array.isArray(payload.records))throw Error('Keine unterstützte Kalibrierungsdatei.');
-        const refs=payload.records;if(refs.length>300||refs.some(x=>!isValidCalRecord(x)))throw Error('Ungültige oder zu viele Referenzen.');
-        if(!confirm(`${refs.length} Referenzen importieren und bestehende ersetzen?`))return;
-        calRecords=refs;saveCalibration();update(true);note('Referenzbaujobs importiert.');
-      }catch(e){note('Import fehlgeschlagen: '+e.message,true);}finally{event.target.value='';}
+      try{if(f.size>2000000)throw Error('Datei zu groß (maximal 2 MB).');
+        const payload=JSON.parse(await f.text());if(!['BeckerTools-CalV32','BeckerTools-CalDB'].includes(payload.format)||!Array.isArray(payload.records))throw Error('Keine unterstützte Kalibrierungsdatei.');
+        const refs=payload.records;
+        if(refs.length>CALMAX||refs.some(x=>!isValidCalRecord(x)))throw Error('Ungültige oder zu viele Referenzen.');
+        if(!confirm(`${refs.length} Referenzen importieren und bestehende Datenbank ERSETZEN?`))return;
+        calRecords=refs.map(r=>({...r,id:r.id||newCalId()}));saveCalibration();resetCalForm();update(true);note('Referenzdatenbank importiert. Alte V3.2-Jobs bei Bedarf um Geometrie ergänzen.');
+      }catch(e){note('JSON-Import fehlgeschlagen: '+e.message,true);}finally{event.target.value='';}
+    });
+    $('qt-cal-import-csv').addEventListener('click',()=>$('qt-cal-import-csv-file').click());
+    $('qt-cal-import-csv-file').addEventListener('change',async event=>{
+      const f=event.target.files?.[0];if(!f)return;
+      try{
+        if(f.size>1500000)throw Error('CSV zu groß (maximal 1,5 MB).');
+        const content=(await f.text()).replace(/^\ufeff/,'');
+        const csvParse=(raw,sep)=>{
+          const rows=[];let row=[],cell='',quoted=false;
+          for(let i=0;i<raw.length;i++){
+            const c=raw[i];if(quoted){if(c==='"'&&raw[i+1]==='"'){cell+='"';i++;}else if(c==='"')quoted=false;else cell+=c;}
+            else if(c==='"')quoted=true;else if(c===sep){row.push(cell);cell='';}
+            else if(c==='\r'||c==='\n'){if(c==='\r'&&raw[i+1]==='\n')i++;row.push(cell);if(row.some(v=>v.trim()))rows.push(row);row=[];cell='';}
+            else cell+=c;
+          }
+          if(quoted)throw Error('CSV-Anführungszeichen nicht geschlossen.');
+          row.push(cell);if(row.some(v=>v.trim()))rows.push(row);
+          return rows;
+        };
+        const sep=content.split(/\r?\n/,1)[0].includes(';')?';':',';
+        const rows=csvParse(content,sep),head=(rows.shift()||[]).map(x=>x.trim().toLowerCase());
+        if(!csvFields.every(x=>head.includes(x)))throw Error('CSV-Format nicht erkannt. Bitte zuerst eine CSV-Datenbankvorlage über „Excel-CSV exportieren“ herunterladen.');
+        const col=k=>head.indexOf(k),numeric=x=>Number(String(x||'').trim().replace(',','.'));
+        const imported=rows.map((cells,i)=>{
+          const val=k=>String(cells[col(k)]??'').trim();
+          const vol=val('volumen_cm3'),lay=val('schichten');
+          const r={id:val('id')||newCalId()+i,machine:val('maschine'),material:val('material'),layer:numeric(val('schichtdicke_um')),lasers:numeric(val('laser')),volume:vol?numeric(vol):undefined,layers:lay?numeric(lay):undefined,predicted:numeric(val('prognose_h')),actual:numeric(val('ist_h')),date:val('datum'),note:val('notiz').slice(0,120)};
+          if(!isValidCalRecord(r))throw Error(`Zeile ${i+2} enthält ungültige Werte. Maschine als 500I/500II/500III/280; Zeiten in h; Volumen in cm³; Schichten ganzzahlig.`);
+          return r;
+        });
+        if(!imported.length)throw Error('Keine Datensätze in der CSV.');
+        const merged=new Map(calRecords.map(r=>[r.id||newCalId(),r]));for(const r of imported)merged.set(r.id,r);
+        if(merged.size>CALMAX)throw Error(`Zu viele Referenzen, maximal ${CALMAX}.`);
+        if(!confirm(`${imported.length} CSV-Zeilen zur Datenbank hinzufügen? Gleiche IDs werden aktualisiert.`))return;
+        calRecords=[...merged.values()];saveCalibration();resetCalForm();update(true);note(`${imported.length} CSV-Referenzen importiert.`);
+      }catch(e){note('CSV-Import fehlgeschlagen: '+e.message,true);}finally{event.target.value='';}
     });
     Object.entries(fields).forEach(([key,id])=>{
       $(id).addEventListener(key==='machine'||key==='material'?'change':'input',()=>{
@@ -975,5 +1106,5 @@
   normalize();
   if(!data.offer.valid){const dt=new Date();dt.setDate(dt.getDate()+30);data.offer.valid=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;}
   const printContainer=document.createElement('div');printContainer.id='qt-offer-print';document.body.append(printContainer);
-  putInputs();$('qt-cal-date').value=new Date().toLocaleDateString('sv-SE');register();renderCal();showStep(0);
+  useCurrentCal();$('qt-cal-date').value=new Date().toLocaleDateString('sv-SE');putInputs();register();renderCal();showStep(0);
 })();
